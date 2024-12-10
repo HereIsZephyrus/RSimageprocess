@@ -24,7 +24,7 @@ public:
         static Camera2D instance;
         return instance;
     }
-    //void processKeyboard(GLFWwindow* window);
+    void processKeyboard(GLFWwindow* window);
     void processScroll(GLFWwindow* window, double xoffset, double yoffset, bool pressCtrl, bool pressAlt);
     void zoomInOut(float yOffset);
     glm::mat4 getProjectionMatrix() const {return projectionMatrix;}

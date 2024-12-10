@@ -13,10 +13,11 @@
 #include <GLFW/glfw3.h>
 #include "OpenGL/graphing.hpp"
 #include "OpenGL/window.hpp"
+#include "OpenGL/commander.hpp"
+#include "OpenGL/camera.hpp"
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
-#include "gdal.h"
 
 int main(int argc, const char * argv[]) {
     GLFWwindow *& window = WindowParas::getInstance().window;
@@ -24,11 +25,15 @@ int main(int argc, const char * argv[]) {
         return -1;
     InitResource(window);
     gui::Initialization(window);
+    BufferRecorder& buffer = BufferRecorder::getBuffer();
+    Camera2D& camera = Camera2D::getView();
+    buffer.initIO(window);
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
         glClearColor(0,0,0,0);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         gui::DrawBasic();
+        camera.processKeyboard(window);
         std::vector<Vertex> test_points{
             {glm::vec3{-0.5,-0.5,0.0},{1.0,1.0,1.0}},
             {glm::vec3{0.5,-0.5,0.0},{1.0,1.0,1.0}},

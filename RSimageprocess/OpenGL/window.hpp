@@ -37,8 +37,6 @@ public:
     GLfloat xScale,yScale;
     GLfloat screen2normalX(GLdouble screenX);
     GLfloat screen2normalY(GLdouble screenY);
-    GLfloat normal2orthoX(GLfloat normalX);
-    GLfloat normal2orthoY(GLfloat normalY);
     void InitParas();
 private:
     WindowParas() {}

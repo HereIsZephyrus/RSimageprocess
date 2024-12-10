@@ -25,16 +25,6 @@ GLfloat WindowParas::screen2normalX(GLdouble screenX){
 GLfloat WindowParas::screen2normalY(GLdouble screenY){
     return 1.0f - (2.0f * static_cast<GLfloat>((screenY - SCREEN_BOTTON) / SCREEN_HEIGHT * yScale));
 }
-GLfloat WindowParas::normal2orthoX(GLfloat normalX){
-    GLfloat left = -SCREEN_WIDTH / xScale / 2.0f;
-    GLfloat right = SCREEN_WIDTH / xScale / 2.0f;
-    return  left + (right - left) * (normalX + 1) / 2;
-}
-GLfloat WindowParas::normal2orthoY(GLfloat normalY){
-    GLfloat button = -SCREEN_HEIGHT / yScale / 2.0f;
-    GLfloat top = SCREEN_HEIGHT / yScale / 2.0f;
-    return  button + (top - button) * (normalY + 1) / 2;
-}
 void windowPosChangeCallback(GLFWwindow* window, int xpos, int ypos){
     WindowParas& windowPara = WindowParas::getInstance();
     glViewport(windowPara.SCREEN_LEFT, windowPara.SCREEN_BOTTON, windowPara.SCREEN_WIDTH, windowPara.SCREEN_HEIGHT);
