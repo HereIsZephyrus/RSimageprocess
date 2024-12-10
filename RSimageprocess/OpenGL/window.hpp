@@ -44,6 +44,8 @@ private:
     WindowParas() {}
 };
 
+void windowPosChangeCallback(GLFWwindow* window, int xpos, int ypos);
+void windowRefreshCallback(GLFWwindow* window);
 namespace gui {
 constexpr GLfloat detactBias = 0.48f;
 constexpr GLfloat outboundBias = 2.0f;

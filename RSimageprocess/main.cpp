@@ -22,13 +22,20 @@ int main(int argc, const char * argv[]) {
     GLFWwindow *& window = WindowParas::getInstance().window;
     if (!HAS_INIT_OPENGL_CONTEXT && initOpenGL(window,"2025Autumn数字图像处理") != 0)
         return -1;
-    //InitResource(window);
+    InitResource(window);
     gui::Initialization(window);
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
         glClearColor(0,0,0,0);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         gui::DrawBasic();
+        std::vector<Vertex> test_points{
+            {glm::vec3{-0.5,-0.5,0.0},{1.0,1.0,1.0}},
+            {glm::vec3{0.5,-0.5,0.0},{1.0,1.0,1.0}},
+            {glm::vec3{0.0,0.5,0.0},{1.0,1.0,1.0}}
+        };
+        Primitive test(test_points, GL_TRIANGLES, ShaderBucket["test"].get());
+        test.draw();
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
         glfwSwapBuffers(window);
@@ -38,6 +45,6 @@ int main(int argc, const char * argv[]) {
     ImGui::DestroyContext();
     glfwDestroyWindow(window);
     glfwTerminate();
-    WindowParas::getInstance().window = nullptr;
+    //WindowParas::getInstance().window = nullptr;
     return 0;
 }

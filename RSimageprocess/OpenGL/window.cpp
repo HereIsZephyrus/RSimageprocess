@@ -35,6 +35,14 @@ GLfloat WindowParas::normal2orthoY(GLfloat normalY){
     GLfloat top = SCREEN_HEIGHT / yScale / 2.0f;
     return  button + (top - button) * (normalY + 1) / 2;
 }
+void windowPosChangeCallback(GLFWwindow* window, int xpos, int ypos){
+    WindowParas& windowPara = WindowParas::getInstance();
+    glViewport(windowPara.SCREEN_LEFT, windowPara.SCREEN_BUTTOM, windowPara.SCREEN_WIDTH, windowPara.SCREEN_HEIGHT);
+}
+void windowRefreshCallback(GLFWwindow* window){
+    WindowParas& windowPara = WindowParas::getInstance();
+    glViewport(windowPara.SCREEN_LEFT, windowPara.SCREEN_BUTTOM, windowPara.SCREEN_WIDTH, windowPara.SCREEN_HEIGHT);
+}
 int initOpenGL(GLFWwindow *&window,std::string windowName) {
     if (!glfwInit()) {
         std::cerr << "Failed to initialize GLFW" << std::endl;
@@ -64,6 +72,8 @@ int initOpenGL(GLFWwindow *&window,std::string windowName) {
     glEnable(GL_PROGRAM_POINT_SIZE);
     glEnable(GL_MULTISAMPLE);
     const GLubyte* version = glGetString(GL_VERSION);
+    glfwSetWindowPosCallback(window, windowPosChangeCallback);
+    glfwSetWindowRefreshCallback(window, windowRefreshCallback);
     std::cout<<version<<std::endl;
     HAS_INIT_OPENGL_CONTEXT = true;
     return 0;
@@ -73,7 +83,7 @@ ImFont *englishFont = nullptr,*chineseFont = nullptr;
 int Initialization(GLFWwindow *window) {
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
-    ImGui::StyleColorsLight();
+    ImGui::StyleColorsDark();
     ImGuiIO& io = ImGui::GetIO();
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
     ImGui_ImplGlfw_InitForOpenGL(window, true);

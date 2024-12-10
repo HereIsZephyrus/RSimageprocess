@@ -14,7 +14,7 @@
 std::map<std::string,pShader > ShaderBucket;
 GLchar* filePath(const char* fileName){
     //checkSourceRelevantPath();
-    const char * shaderSearchPath ="/Users/channingtong/Program/RSimageprocess/RSimageprocess/OpenGL/shaders";
+    const char * shaderSearchPath ="/Users/channingtong/Program/RSimageprocess/RSimageprocess/OpenGL/shaders/";
     GLchar* resource = new char[strlen(shaderSearchPath) + strlen(fileName) + 1];
     strcpy(resource, shaderSearchPath);
     strcat(resource, fileName);
@@ -145,4 +145,13 @@ void Primitive::update(){
 
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindVertexArray(0);
+}
+void InitResource(GLFWwindow *window){
+    {
+        pShader test (new Shader());
+        test->attchShader(filePath("test_vertices.vs"),GL_VERTEX_SHADER);
+        test->attchShader(filePath("test_line.frag"),GL_FRAGMENT_SHADER);
+        test->linkProgram();
+        ShaderBucket["test"] = std::move(test);
+    }
 }

@@ -63,4 +63,5 @@ protected:
 };
 typedef std::unique_ptr<Shader> pShader;
 extern std::map<std::string,pShader > ShaderBucket;
+void InitResource(GLFWwindow *window);
 #endif /* graphing_hpp */
