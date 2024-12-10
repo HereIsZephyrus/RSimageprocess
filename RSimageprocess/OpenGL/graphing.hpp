@@ -54,12 +54,14 @@ public:
     friend binarytree::BallPara;
     void update();
 protected:
+    void initResource(GLenum shp,Shader* inputshader);
     GLuint VAO,VBO;
     Shader* shader;
     GLenum shape;
-    GLsizei stride;
+    static constexpr GLsizei stride = 6;
     size_t vertexNum;
     GLfloat* vertices;
+    glm::mat4 transMat;
 };
 typedef std::unique_ptr<Shader> pShader;
 extern std::map<std::string,pShader > ShaderBucket;

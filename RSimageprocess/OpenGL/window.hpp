@@ -33,7 +33,7 @@ public:
     const GLint WINDOW_WIDTH = 1280;
     const GLint WINDOW_HEIGHT = 720;
     const GLint SIDEBAR_WIDTH = 250;
-    GLint SCREEN_WIDTH,SCREEN_HEIGHT,SCREEN_LEFT,SCREEN_BUTTOM;
+    GLint SCREEN_WIDTH,SCREEN_HEIGHT,SCREEN_LEFT,SCREEN_BOTTON;
     GLfloat xScale,yScale;
     GLfloat screen2normalX(GLdouble screenX);
     GLfloat screen2normalY(GLdouble screenY);

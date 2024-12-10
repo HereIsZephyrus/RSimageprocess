@@ -16,14 +16,14 @@
 
 void WindowParas::InitParas(){
     glfwGetWindowContentScale(window, &xScale, &yScale);
-    SCREEN_LEFT = SIDEBAR_WIDTH * xScale;   SCREEN_BUTTOM = 0;
-    SCREEN_WIDTH = WINDOW_WIDTH * xScale - SCREEN_LEFT;   SCREEN_HEIGHT = WINDOW_HEIGHT * yScale - SCREEN_BUTTOM;
+    SCREEN_LEFT = SIDEBAR_WIDTH * xScale;   SCREEN_BOTTON = 0;
+    SCREEN_WIDTH = WINDOW_WIDTH * xScale - SCREEN_LEFT;   SCREEN_HEIGHT = WINDOW_HEIGHT * yScale - SCREEN_BOTTON;
 }
 GLfloat WindowParas::screen2normalX(GLdouble screenX){
     return  (2.0f * static_cast<GLfloat>((screenX - SCREEN_LEFT)/ SCREEN_WIDTH * xScale)) - 1.0f;
 }
 GLfloat WindowParas::screen2normalY(GLdouble screenY){
-    return 1.0f - (2.0f * static_cast<GLfloat>((screenY - SCREEN_BUTTOM) / SCREEN_HEIGHT * yScale));
+    return 1.0f - (2.0f * static_cast<GLfloat>((screenY - SCREEN_BOTTON) / SCREEN_HEIGHT * yScale));
 }
 GLfloat WindowParas::normal2orthoX(GLfloat normalX){
     GLfloat left = -SCREEN_WIDTH / xScale / 2.0f;
@@ -37,11 +37,11 @@ GLfloat WindowParas::normal2orthoY(GLfloat normalY){
 }
 void windowPosChangeCallback(GLFWwindow* window, int xpos, int ypos){
     WindowParas& windowPara = WindowParas::getInstance();
-    glViewport(windowPara.SCREEN_LEFT, windowPara.SCREEN_BUTTOM, windowPara.SCREEN_WIDTH, windowPara.SCREEN_HEIGHT);
+    glViewport(windowPara.SCREEN_LEFT, windowPara.SCREEN_BOTTON, windowPara.SCREEN_WIDTH, windowPara.SCREEN_HEIGHT);
 }
 void windowRefreshCallback(GLFWwindow* window){
     WindowParas& windowPara = WindowParas::getInstance();
-    glViewport(windowPara.SCREEN_LEFT, windowPara.SCREEN_BUTTOM, windowPara.SCREEN_WIDTH, windowPara.SCREEN_HEIGHT);
+    glViewport(windowPara.SCREEN_LEFT, windowPara.SCREEN_BOTTON, windowPara.SCREEN_WIDTH, windowPara.SCREEN_HEIGHT);
 }
 int initOpenGL(GLFWwindow *&window,std::string windowName) {
     if (!glfwInit()) {
@@ -68,7 +68,7 @@ int initOpenGL(GLFWwindow *&window,std::string windowName) {
         return -2;
     }
     windowPara.InitParas();
-    glViewport(windowPara.SCREEN_LEFT, windowPara.SCREEN_BUTTOM, windowPara.SCREEN_WIDTH, windowPara.SCREEN_HEIGHT);
+    glViewport(windowPara.SCREEN_LEFT, windowPara.SCREEN_BOTTON, windowPara.SCREEN_WIDTH, windowPara.SCREEN_HEIGHT);
     glEnable(GL_PROGRAM_POINT_SIZE);
     glEnable(GL_MULTISAMPLE);
     const GLubyte* version = glGetString(GL_VERSION);

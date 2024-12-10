@@ -10,6 +10,7 @@
 #include <iostream>
 #include "graphing.hpp"
 #include "window.hpp"
+#include "camera.hpp"
 
 std::map<std::string,pShader > ShaderBucket;
 GLchar* filePath(const char* fileName){
@@ -70,64 +71,61 @@ void Shader::linkProgram(){
     }
 }
 
+void Primitive::initResource(GLenum shp,Shader* inputshader){
+    transMat = glm::mat4(1.0f);
+    shape = shp;
+    shader = inputshader;
+    glGenVertexArrays(1,&VAO);
+    glGenBuffers(1,&VBO);
+    glBindVertexArray(VAO);
+    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * vertexNum * 6, vertices, GL_STATIC_DRAW);
+
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(GLfloat)*stride, (GLvoid*)0);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(GLfloat)*stride, (GLvoid*)(sizeof(GLfloat) * 3));
+    glEnableVertexAttribArray(1);
+
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindVertexArray(0);
+}
 Primitive::Primitive(const std::vector<Vertex>& inputVertex,GLenum shp,Shader* inputshader){
     using structVert = std::vector<Vertex>;
-    stride = 6;
-    shape = shp;
     vertexNum = inputVertex.size();
-    //std::cout<<vertexNum<<std::endl;
-    vertices = new GLfloat[vertexNum * 6];
+    vertices = new GLfloat[vertexNum * stride];
     for (size_t i = 0; i < vertexNum; i++){
         vertices[i * 6] = inputVertex[i].position[0];        vertices[i * 6 + 1] = inputVertex[i].position[1];        vertices[i * 6 + 2] = inputVertex[i].position[2];
         vertices[i * 6 + 3] = inputVertex[i].color[0];        vertices[i * 6 + 4] = inputVertex[i].color[1];        vertices[i * 6 + 5] = inputVertex[i].color[2];
     }
-    shader = inputshader;
-    glGenVertexArrays(1,&VAO);
-    glGenBuffers(1,&VBO);
-    glBindVertexArray(VAO);
-    glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * vertexNum * 6, vertices, GL_STATIC_DRAW);
-
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(GLfloat)*stride, (GLvoid*)0);
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(GLfloat)*stride, (GLvoid*)(sizeof(GLfloat) * 3));
-    glEnableVertexAttribArray(1);
-
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-    glBindVertexArray(0);
+    initResource(shp,inputshader);
 }
 Primitive::Primitive(const Vertex& inputVertex,GLenum shp,Shader* inputshader){
-    shader = inputshader;
     vertexNum = 1;
-    vertices = new GLfloat[vertexNum * 6];
+    vertices = new GLfloat[vertexNum * stride];
     vertices[0] = inputVertex.position[0];        vertices[1] = inputVertex.position[1];        vertices[2] = inputVertex.position[2];
     vertices[3] = inputVertex.color[0];        vertices[4] = inputVertex.color[1];        vertices[5] = inputVertex.color[2];
-    glGenVertexArrays(1,&VAO);
-    glGenBuffers(1,&VBO);
-    glBindVertexArray(VAO);
-    glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * vertexNum * 6, vertices, GL_STATIC_DRAW);
-
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(GLfloat)*stride, (GLvoid*)0);
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(GLfloat)*stride, (GLvoid*)(sizeof(GLfloat) * 3));
-    glEnableVertexAttribArray(1);
-
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-    glBindVertexArray(0);
+    initResource(shp,inputshader);
 }
 void Primitive::draw() const {
-    //std::cout<<"Draw is running"<<std::endl;
     if (shader == nullptr){
         std::cerr<<"havn't bind shader"<<std::endl;
         return;
     }
     else
         shader ->use();
+    GLuint projectionLoc = glGetUniformLocation(shader->program, "projection");
+    GLuint viewLoc = glGetUniformLocation(shader->program, "view");
+    GLuint modelLoc = glGetUniformLocation(shader->program, "model");
+    Camera2D& camera = Camera2D::getView();
+    glm::mat4 projection = camera.getProjectionMatrix();
+    glm::mat4 view = camera.getViewMatrix();
+    glm::mat4 model = transMat;
+    glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(projection));
+    glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
+    glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+    
     GLuint thicknessLoc = glGetUniformLocation(shader->program, "thickness");
-    GLuint transparentLoc = glGetUniformLocation(shader->program, "transparent");
     glUniform1f(thicknessLoc,0.02f);
-    glUniform1f(transparentLoc,1.0f);
     glBindVertexArray(VAO);
     glDrawArrays(shape, 0, static_cast<GLsizei>(vertexNum));
     glBindVertexArray(0);
