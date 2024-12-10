@@ -6,6 +6,21 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		323C78132D08069E00C62C36 /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 323C78122D08069E00C62C36 /* OpenGL.framework */; };
+		323C78152D0806B500C62C36 /* libgdal.35.3.9.3.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 323C78142D0806B500C62C36 /* libgdal.35.3.9.3.dylib */; };
+		323C78162D0806B500C62C36 /* libgdal.35.3.9.3.dylib in Embed Libraries */ = {isa = PBXBuildFile; fileRef = 323C78142D0806B500C62C36 /* libgdal.35.3.9.3.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
+		323C78172D0806E500C62C36 /* libgdal.35.3.9.3.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 323C78142D0806B500C62C36 /* libgdal.35.3.9.3.dylib */; };
+		323C78192D0806F400C62C36 /* libGLEW.2.2.0.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 323C78182D0806F400C62C36 /* libGLEW.2.2.0.dylib */; };
+		323C781A2D0806F400C62C36 /* libGLEW.2.2.0.dylib in Embed Libraries */ = {isa = PBXBuildFile; fileRef = 323C78182D0806F400C62C36 /* libGLEW.2.2.0.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
+		323C781C2D08070E00C62C36 /* libglfw.3.4.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 323C781B2D08070E00C62C36 /* libglfw.3.4.dylib */; };
+		323C781D2D08070E00C62C36 /* libglfw.3.4.dylib in Embed Libraries */ = {isa = PBXBuildFile; fileRef = 323C781B2D08070E00C62C36 /* libglfw.3.4.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
+		323C781F2D08072400C62C36 /* libglm.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 323C781E2D08072400C62C36 /* libglm.dylib */; };
+		323C78202D08072400C62C36 /* libglm.dylib in Embed Libraries */ = {isa = PBXBuildFile; fileRef = 323C781E2D08072400C62C36 /* libglm.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
+		323C78222D08074E00C62C36 /* libomp.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 323C78212D08074E00C62C36 /* libomp.dylib */; };
+		323C78232D08074E00C62C36 /* libomp.dylib in Embed Libraries */ = {isa = PBXBuildFile; fileRef = 323C78212D08074E00C62C36 /* libomp.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
+/* End PBXBuildFile section */
+
 /* Begin PBXCopyFilesBuildPhase section */
 		323C77A32D08049800C62C36 /* CopyFiles */ = {
 			isa = PBXCopyFilesBuildPhase;
@@ -16,10 +31,33 @@
 			);
 			runOnlyForDeploymentPostprocessing = 1;
 		};
+		323C78072D0805F100C62C36 /* Embed Libraries */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 10;
+			files = (
+				323C78232D08074E00C62C36 /* libomp.dylib in Embed Libraries */,
+				323C781D2D08070E00C62C36 /* libglfw.3.4.dylib in Embed Libraries */,
+				323C78202D08072400C62C36 /* libglm.dylib in Embed Libraries */,
+				323C78162D0806B500C62C36 /* libgdal.35.3.9.3.dylib in Embed Libraries */,
+				323C781A2D0806F400C62C36 /* libGLEW.2.2.0.dylib in Embed Libraries */,
+			);
+			name = "Embed Libraries";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		323C77A52D08049800C62C36 /* RSimageprocess */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = RSimageprocess; sourceTree = BUILT_PRODUCTS_DIR; };
+		323C78122D08069E00C62C36 /* OpenGL.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = OpenGL.framework; path = System/Library/Frameworks/OpenGL.framework; sourceTree = SDKROOT; };
+		323C78142D0806B500C62C36 /* libgdal.35.3.9.3.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libgdal.35.3.9.3.dylib; path = ../../../../opt/homebrew/Cellar/gdal/3.9.3_1/lib/libgdal.35.3.9.3.dylib; sourceTree = "<group>"; };
+		323C78182D0806F400C62C36 /* libGLEW.2.2.0.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libGLEW.2.2.0.dylib; path = ../../../../opt/homebrew/Cellar/glew/2.2.0_1/lib/libGLEW.2.2.0.dylib; sourceTree = "<group>"; };
+		323C781B2D08070E00C62C36 /* libglfw.3.4.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libglfw.3.4.dylib; path = ../../../../opt/homebrew/Cellar/glfw/3.4/lib/libglfw.3.4.dylib; sourceTree = "<group>"; };
+		323C781E2D08072400C62C36 /* libglm.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libglm.dylib; path = ../../../../opt/homebrew/Cellar/glm/1.0.1/lib/libglm.dylib; sourceTree = "<group>"; };
+		323C78212D08074E00C62C36 /* libomp.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libomp.dylib; path = ../../../../opt/homebrew/Cellar/libomp/19.1.2/lib/libomp.dylib; sourceTree = "<group>"; };
+		323C78272D08080D00C62C36 /* RSimageprocess-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "RSimageprocess-Bridging-Header.h"; sourceTree = "<group>"; };
+		323C78282D08086000C62C36 /* readme.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = readme.md; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -35,6 +73,13 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				323C78152D0806B500C62C36 /* libgdal.35.3.9.3.dylib in Frameworks */,
+				323C781F2D08072400C62C36 /* libglm.dylib in Frameworks */,
+				323C78222D08074E00C62C36 /* libomp.dylib in Frameworks */,
+				323C78192D0806F400C62C36 /* libGLEW.2.2.0.dylib in Frameworks */,
+				323C78172D0806E500C62C36 /* libgdal.35.3.9.3.dylib in Frameworks */,
+				323C781C2D08070E00C62C36 /* libglfw.3.4.dylib in Frameworks */,
+				323C78132D08069E00C62C36 /* OpenGL.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -44,8 +89,11 @@
 		323C779C2D08049800C62C36 = {
 			isa = PBXGroup;
 			children = (
+				323C78282D08086000C62C36 /* readme.md */,
 				323C77A72D08049800C62C36 /* RSimageprocess */,
+				323C77E52D0804EB00C62C36 /* Frameworks */,
 				323C77A62D08049800C62C36 /* Products */,
+				323C78272D08080D00C62C36 /* RSimageprocess-Bridging-Header.h */,
 			);
 			sourceTree = "<group>";
 		};
@@ -55,6 +103,19 @@
 				323C77A52D08049800C62C36 /* RSimageprocess */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		323C77E52D0804EB00C62C36 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				323C78212D08074E00C62C36 /* libomp.dylib */,
+				323C781E2D08072400C62C36 /* libglm.dylib */,
+				323C781B2D08070E00C62C36 /* libglfw.3.4.dylib */,
+				323C78182D0806F400C62C36 /* libGLEW.2.2.0.dylib */,
+				323C78142D0806B500C62C36 /* libgdal.35.3.9.3.dylib */,
+				323C78122D08069E00C62C36 /* OpenGL.framework */,
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -67,6 +128,7 @@
 				323C77A12D08049800C62C36 /* Sources */,
 				323C77A22D08049800C62C36 /* Frameworks */,
 				323C77A32D08049800C62C36 /* CopyFiles */,
+				323C78072D0805F100C62C36 /* Embed Libraries */,
 			);
 			buildRules = (
 			);
@@ -93,6 +155,7 @@
 				TargetAttributes = {
 					323C77A42D08049800C62C36 = {
 						CreatedOnToolsVersion = 16.1;
+						LastSwiftMigration = 1610;
 					};
 				};
 			};
@@ -244,20 +307,69 @@
 		323C77AD2D08049800C62C36 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_ENTITLEMENTS = RSimageprocess/RSimageprocess.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = 379P4X5DA9;
 				ENABLE_HARDENED_RUNTIME = YES;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(SDKROOT)/../../../../../../../../../Users/channingtong/Program/RSimageprocess",
+				);
+				HEADER_SEARCH_PATHS = (
+					"${glm_header-1.0}",
+					/opt/homebrew/Cellar/libomp/19.1.2/include,
+					"${glew_header-2.2}",
+					"${glfw_header-3.4}",
+					"${gdal_header_3.9}",
+				);
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)",
+					/opt/homebrew/Cellar/gdal/3.9.3_1/lib,
+					/opt/homebrew/Cellar/glew/2.2.0_1/lib,
+					/opt/homebrew/Cellar/glfw/3.4/lib,
+					/opt/homebrew/Cellar/glm/1.0.1/lib,
+					/opt/homebrew/Cellar/libomp/19.1.2/lib,
+				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_OBJC_BRIDGING_HEADER = "RSimageprocess-Bridging-Header.h";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 6.0;
 			};
 			name = Debug;
 		};
 		323C77AE2D08049800C62C36 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_ENTITLEMENTS = RSimageprocess/RSimageprocess.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = 379P4X5DA9;
 				ENABLE_HARDENED_RUNTIME = YES;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(SDKROOT)/../../../../../../../../../Users/channingtong/Program/RSimageprocess",
+				);
+				HEADER_SEARCH_PATHS = (
+					"${glm_header-1.0}",
+					/opt/homebrew/Cellar/libomp/19.1.2/include,
+					"${glew_header-2.2}",
+					"${glfw_header-3.4}",
+					"${gdal_header_3.9}",
+				);
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)",
+					/opt/homebrew/Cellar/gdal/3.9.3_1/lib,
+					/opt/homebrew/Cellar/glew/2.2.0_1/lib,
+					/opt/homebrew/Cellar/glfw/3.4/lib,
+					/opt/homebrew/Cellar/glm/1.0.1/lib,
+					/opt/homebrew/Cellar/libomp/19.1.2/lib,
+				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_OBJC_BRIDGING_HEADER = "RSimageprocess-Bridging-Header.h";
+				SWIFT_VERSION = 6.0;
 			};
 			name = Release;
 		};
