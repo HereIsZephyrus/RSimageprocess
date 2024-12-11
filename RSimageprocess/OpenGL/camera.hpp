@@ -35,7 +35,7 @@ public:
     glm::mat4 getViewMatrix() const {return viewMatrix;}
     float getZoom() const {return zoom;}
     glm::vec2 getPosition() const {return position;}
-    GLfloat getCameraSpeed(GLfloat speed) const {return speed * deltaTime * zoom;}
+    GLfloat getCameraSpeed(GLfloat speed) const {return speed * deltaTime / zoom;}
     void setDeltaPosition(glm::vec2 previewPosition,GLfloat x,GLfloat y){
         position.x = previewPosition.x + x;
         position.y = previewPosition.y + y;

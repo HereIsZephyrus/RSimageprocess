@@ -43,21 +43,23 @@ void Camera2D::zoomInOut(float yOffset) {
 }
 Camera2D::Camera2D() : position(0.0f, 0.0f), zoom(1.0f){
     projectionMatrix = glm::ortho(-1.0f, 1.0f, -1.0f, 1.0f, -100.0f, 100.0f);
-    updateViewMatrix();
+    viewMatrix = glm::mat4(1.0f);
 }
 void Camera2D::setExtent(Extent extent){
-    //position.x = (extent.left + extent.right) / 2;
-    //position.y = (extent.botton + extent.top) / 2;
+    position.x = (extent.left + extent.right) / 2;
+    position.y = (extent.botton + extent.top) / 2;
     zoom = 1;
     updateProjectionMatrix((extent.right - extent.left) * marginRate, (extent.top - extent.botton) * marginRate);
+    updateViewMatrix();
 }
 void Camera2D::updateProjectionMatrix(GLfloat width,GLfloat height){
     projectionMatrix = glm::ortho(-width/2,width/2, - height/2,height/2, -100.0f, 100.0f);
 }
 void Camera2D::updateViewMatrix() {
-    glm::vec3 currentPosition = {viewMatrix[0][0],viewMatrix[1][1],viewMatrix[2][2]};
     glm::vec3 scaling(zoom, zoom, 1.0f);
-    viewMatrix = glm::scale(glm::mat4(1.0f), scaling);
-    viewMatrix = glm::translate(viewMatrix, glm::vec3(-position / zoom, 0.0f));
+    viewMatrix = glm::mat4(1.0f);
+    //viewMatrix = glm::translate(viewMatrix, glm::vec3(position, 0.0f));
+    viewMatrix = glm::scale(viewMatrix, scaling);
+    viewMatrix = glm::translate(viewMatrix, glm::vec3(-position, 0.0f));
 }
 
