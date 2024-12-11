@@ -144,6 +144,25 @@ void Primitive::update(){
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindVertexArray(0);
 }
+Image::Image(const std::vector<Vertex>& inputVertex):Primitive(inputVertex,GL_LINE_LOOP,ShaderBucket["line"].get()){
+    std::vector<Vertex>::const_iterator vertex = inputVertex.begin();
+    extent.left = vertex->position.x;   extent.right = vertex->position.x;
+    extent.botton = vertex->position.y;   extent.top = vertex->position.y;
+    for (; vertex != inputVertex.end(); vertex++){
+        extent.left = std::min(extent.left,vertex->position.x);
+        extent.right = std::max(extent.right,vertex->position.x);
+        extent.botton = std::min(extent.botton,vertex->position.y);
+        extent.top = std::max(extent.top,vertex->position.y);
+    }
+}
+ROI::ROI(const std::vector<Vertex>& inputVertex):Primitive(inputVertex,GL_LINE_LOOP,ShaderBucket["line"].get()){
+    startPosition = inputVertex[0].position;
+    
+}
+ROI::ROI(const Vertex& inputVertex):Primitive(inputVertex,GL_LINE_LOOP,ShaderBucket["line"].get()){
+    startPosition = inputVertex.position;
+    
+}
 void InitResource(GLFWwindow *window){
     {
         pShader test (new Shader());
@@ -151,5 +170,13 @@ void InitResource(GLFWwindow *window){
         test->attchShader(filePath("test_line.frag"),GL_FRAGMENT_SHADER);
         test->linkProgram();
         ShaderBucket["test"] = std::move(test);
+    }
+    {
+        pShader line (new Shader());
+        line->attchShader(filePath("vertices.vs"),GL_VERTEX_SHADER);
+        line->attchShader(filePath("weightingline.gs"), GL_GEOMETRY_SHADER);
+        line->attchShader(filePath("line.frag"),GL_FRAGMENT_SHADER);
+        line->linkProgram();
+        ShaderBucket["line"] = std::move(line);
     }
 }

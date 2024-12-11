@@ -15,6 +15,7 @@
 #include <string>
 #include <map>
 #include <glm/glm.hpp>
+#include "camera.hpp"
 
 struct Vertex {
     glm::vec3 position;
@@ -66,4 +67,16 @@ protected:
 typedef std::unique_ptr<Shader> pShader;
 extern std::map<std::string,pShader > ShaderBucket;
 void InitResource(GLFWwindow *window);
+class Image : public Primitive{
+    Extent extent;
+public:
+    Image(const std::vector<Vertex>& inputVertex);
+    Extent getExtent() const{return extent;}
+};
+class ROI : public Primitive{
+    glm::vec3 startPosition;
+public:
+    ROI(const std::vector<Vertex>& inputVertex);
+    ROI(const Vertex& inputVertex);
+};
 #endif /* graphing_hpp */

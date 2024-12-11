@@ -28,18 +28,19 @@ int main(int argc, const char * argv[]) {
     BufferRecorder& buffer = BufferRecorder::getBuffer();
     Camera2D& camera = Camera2D::getView();
     buffer.initIO(window);
+    std::vector<Vertex> test_points{
+        {glm::vec3{113,40,0.0},{1.0,1.0,1.0}},
+        {glm::vec3{120,40,0.0},{1.0,1.0,1.0}},
+        {glm::vec3{115,50,0.0},{1.0,1.0,1.0}}
+    };
+    Image test(test_points);
+    camera.setExtent(test.getExtent());
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
         glClearColor(0,0,0,0);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         gui::DrawBasic();
         camera.processKeyboard(window);
-        std::vector<Vertex> test_points{
-            {glm::vec3{-0.5,-0.5,0.0},{1.0,1.0,1.0}},
-            {glm::vec3{0.5,-0.5,0.0},{1.0,1.0,1.0}},
-            {glm::vec3{0.0,0.5,0.0},{1.0,1.0,1.0}}
-        };
-        Primitive test(test_points, GL_TRIANGLES, ShaderBucket["test"].get());
         test.draw();
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
