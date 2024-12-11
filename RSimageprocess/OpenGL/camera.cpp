@@ -25,6 +25,11 @@ void Camera2D::processKeyboard(GLFWwindow* window) {
 }
 void Camera2D::processScroll(GLFWwindow* window, double xoffset, double yoffset, bool pressCtrl, bool pressAlt){
     const GLfloat cameraSpeed = getCameraSpeed(4.0f);
+    double xpos,ypos;
+    glfwGetCursorPos(window,&xpos,&ypos);
+    WindowParas& windowPara = WindowParas::getInstance();
+    if (xpos < windowPara.SIDEBAR_WIDTH)
+        return;
     if (pressCtrl)//if conflict, ctrl first:yscroll
         position.y += cameraSpeed * yoffset;
     else if (pressAlt)//if conflict, then alt:xscroll

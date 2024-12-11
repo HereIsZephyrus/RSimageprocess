@@ -101,7 +101,7 @@ void RenderLayerTree(){
     WindowParas& windowPara = WindowParas::getInstance();
     const ImGuiTreeNodeFlags layerFlag = ImGuiTreeNodeFlags_DefaultOpen;
     const ImGuiTreeNodeFlags propertyFlag = ImGuiTreeNodeFlags_Leaf;
-    ImGui::BeginChild("Layers",ImVec2(0,windowPara.WINDOW_HEIGHT / 2));
+    ImGui::BeginChild("Layers",ImVec2(0,windowPara.WINDOW_HEIGHT / 2 / windowPara.yScale));
     if (ImGui::TreeNodeEx("layer1", layerFlag)){
         if (ImGui::IsItemClicked()){
                 // Mark rendered node as being clicked
