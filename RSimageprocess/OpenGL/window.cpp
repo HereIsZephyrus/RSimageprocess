@@ -78,8 +78,8 @@ int Initialization(GLFWwindow *window) {
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init("#version 410");
-    englishFont = io.Fonts->AddFontFromFileTTF("/Users/channingtong/Program/RSimageprocess/ImGUIopengl3/Arial.ttf", 24.0f, nullptr, io.Fonts->GetGlyphRangesDefault());
-    chineseFont = io.Fonts->AddFontFromFileTTF("/Users/channingtong/Program/RSimageprocess/ImGUIopengl3/Songti.ttc", 24.0f,nullptr,io.Fonts->GetGlyphRangesChineseSimplifiedCommon());
+    englishFont = io.Fonts->AddFontFromFileTTF("/Users/channingtong/Program/RSimageprocess/ImGUIopengl3/Arial.ttf", 18.0f, nullptr, io.Fonts->GetGlyphRangesDefault());
+    chineseFont = io.Fonts->AddFontFromFileTTF("/Users/channingtong/Program/RSimageprocess/ImGUIopengl3/Songti.ttc", 18.0f,nullptr,io.Fonts->GetGlyphRangesChineseSimplifiedCommon());
     io.Fonts->Build();
     return  0;
 }
@@ -93,8 +93,79 @@ void DrawBasic() {
     ImGui::SetNextWindowSize(ImVec2(windowPara.SIDEBAR_WIDTH, windowPara.WINDOW_HEIGHT));
     
     ImGui::Begin("Sidebar", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse);
-    
+    RenderLayerTree();
     ImGui::End();
     return;
+}
+void RenderLayerTree(){
+    WindowParas& windowPara = WindowParas::getInstance();
+    const ImGuiTreeNodeFlags layerFlag = ImGuiTreeNodeFlags_DefaultOpen;
+    const ImGuiTreeNodeFlags propertyFlag = ImGuiTreeNodeFlags_Leaf;
+    ImGui::BeginChild("Layers",ImVec2(0,windowPara.WINDOW_HEIGHT / 2));
+    if (ImGui::TreeNodeEx("layer1", layerFlag)){
+        if (ImGui::IsItemClicked()){
+                // Mark rendered node as being clicked
+        }
+        if (ImGui::TreeNodeEx("band1", propertyFlag)){
+            ImGui::TreePop();
+        }
+        if (ImGui::TreeNodeEx("band2", propertyFlag)){
+            ImGui::TreePop();
+        }
+        if (ImGui::TreeNodeEx("band3", propertyFlag)){
+            ImGui::TreePop();
+        }
+        // Call ImGui::TreeNodeEx() recursively to populate each level of children
+        ImGui::TreePop();  // This is required at the end of the if block
+    }
+    if (ImGui::TreeNodeEx("layer1", layerFlag)){
+        if (ImGui::IsItemClicked()){
+                // Mark rendered node as being clicked
+        }
+        if (ImGui::TreeNodeEx("band1", propertyFlag)){
+            ImGui::TreePop();
+        }
+        if (ImGui::TreeNodeEx("band2", propertyFlag)){
+            ImGui::TreePop();
+        }
+        if (ImGui::TreeNodeEx("band3", propertyFlag)){
+            ImGui::TreePop();
+        }
+        // Call ImGui::TreeNodeEx() recursively to populate each level of children
+        ImGui::TreePop();  // This is required at the end of the if block
+    }
+    if (ImGui::TreeNodeEx("layer1", layerFlag)){
+        if (ImGui::IsItemClicked()){
+                // Mark rendered node as being clicked
+        }
+        if (ImGui::TreeNodeEx("band1", propertyFlag)){
+            ImGui::TreePop();
+        }
+        if (ImGui::TreeNodeEx("band2", propertyFlag)){
+            ImGui::TreePop();
+        }
+        if (ImGui::TreeNodeEx("band3", propertyFlag)){
+            ImGui::TreePop();
+        }
+        // Call ImGui::TreeNodeEx() recursively to populate each level of children
+        ImGui::TreePop();  // This is required at the end of the if block
+    }
+    if (ImGui::TreeNodeEx("layer1", layerFlag)){
+        if (ImGui::IsItemClicked()){
+                // Mark rendered node as being clicked
+        }
+        if (ImGui::TreeNodeEx("band1", propertyFlag)){
+            ImGui::TreePop();
+        }
+        if (ImGui::TreeNodeEx("band2", propertyFlag)){
+            ImGui::TreePop();
+        }
+        if (ImGui::TreeNodeEx("band3", propertyFlag)){
+            ImGui::TreePop();
+        }
+        // Call ImGui::TreeNodeEx() recursively to populate each level of children
+        ImGui::TreePop();  // This is required at the end of the if block
+    }
+    ImGui::EndChild();
 }
 }

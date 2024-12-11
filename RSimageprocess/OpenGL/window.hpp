@@ -53,5 +53,6 @@ constexpr GLfloat doubleClickBias = 0.2f;
 extern ImFont *englishFont,*chineseFont;
 int Initialization(GLFWwindow* window);
 void DrawBasic();
+void RenderLayerTree();
 }
 #endif /* window_hpp */

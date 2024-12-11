@@ -154,6 +154,8 @@ Image::Image(const std::vector<Vertex>& inputVertex):Primitive(inputVertex,GL_LI
         extent.botton = std::min(extent.botton,vertex->position.y);
         extent.top = std::max(extent.top,vertex->position.y);
     }
+    glm::vec3 mapPosition = {(extent.left + extent.right) / 2,(extent.botton + extent.top) / 2,0.0};
+    transMat = glm::translate(transMat, -mapPosition);
 }
 ROI::ROI(const std::vector<Vertex>& inputVertex):Primitive(inputVertex,GL_LINE_LOOP,ShaderBucket["line"].get()){
     startPosition = inputVertex[0].position;
