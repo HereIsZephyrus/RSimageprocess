@@ -73,6 +73,27 @@ void Shader::linkProgram(){
     }
 }
 
+Spectum::Spectum(unsigned short* flatd,int w,int h):width(w),height(h){
+    rawData = new unsigned short*[height];
+    showData = new unsigned char[width * height];
+    for (int y = 0; y < height; y++){
+        rawData[y] = new unsigned short[width];
+        for (int x = 0; x < width; x++){
+            int loc = y * width + x;
+            rawData[y][x] = flatd[loc];
+            if (flatd[loc] == 65534)
+                showData[loc] = 0; //nodata
+            else
+                showData[loc] = flatd[loc]/255;
+        }
+    }
+}
+Spectum::~Spectum(){
+    for (size_t h = 0; h < height; h++)
+        delete[] rawData[h];
+    delete[] rawData;
+    delete[] showData;
+}
 void Primitive::initResource(GLenum shp,Shader* inputshader){
     transMat = glm::mat4(1.0f);
     shape = shp;
@@ -92,7 +113,6 @@ void Primitive::initResource(GLenum shp,Shader* inputshader){
     glBindVertexArray(0);
 }
 Primitive::Primitive(const std::vector<Vertex>& inputVertex,GLenum shp,Shader* inputshader){
-    using structVert = std::vector<Vertex>;
     vertexNum = inputVertex.size();
     vertices = new GLfloat[vertexNum * stride];
     for (size_t i = 0; i < vertexNum; i++){
@@ -147,7 +167,7 @@ void Primitive::draw() const {
 void Primitive::update(){
     glBindVertexArray(VAO);
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * vertexNum * 6, vertices, GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * vertexNum * stride, vertices, GL_STATIC_DRAW);
 
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(GLfloat)*stride, (GLvoid*)0);
     glEnableVertexAttribArray(0);
@@ -156,6 +176,59 @@ void Primitive::update(){
 
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindVertexArray(0);
+}
+Texture::Texture(const std::vector<glm::vec3>& position,GLuint textureID):textureID(textureID),shape(GL_TRIANGLE_FAN),shader(ShaderBucket["image"].get()){
+    vertexNum = position.size();
+    const std::vector<glm::vec2> locatoin = {
+        glm::vec2(0.0,1.0), // upleft
+        glm::vec2(1.0,1.0), // upright
+        glm::vec2(1.0,0.0), // downright
+        glm::vec2(0.0,0.0), // downleft
+    };
+    vertices = new GLfloat[vertexNum * stride];
+    for (size_t i = 0; i < vertexNum; i++){
+        vertices[i * 6] = position[i].x;        vertices[i * 6 + 1] = position[i].y;        vertices[i * 6 + 2] = position[i].z;
+        vertices[i * 6 + 3] = locatoin[i].x;    vertices[i * 6 + 4] = locatoin[i].y;
+    }
+    glGenVertexArrays(1,&VAO);
+    glGenBuffers(1,&VBO);
+    glBindVertexArray(VAO);
+    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * vertexNum * stride, vertices, GL_STATIC_DRAW);
+
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(GLfloat)*stride, (GLvoid*)0);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(GLfloat)*stride, (GLvoid*)(sizeof(GLfloat) * 3));
+    glEnableVertexAttribArray(1);
+
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindVertexArray(0);
+}
+void Texture::draw() const {
+    glBindTexture(GL_TEXTURE_2D, textureID);
+    if (shader == nullptr){
+        std::cerr<<"havn't bind shader"<<std::endl;
+        return;
+    }
+    else
+        shader ->use();
+    GLuint projectionLoc = glGetUniformLocation(shader->program, "projection");
+    GLuint viewLoc = glGetUniformLocation(shader->program, "view");
+    GLuint modelLoc = glGetUniformLocation(shader->program, "model");
+    Camera2D& camera = Camera2D::getView();
+    glm::mat4 projection = camera.getProjectionMatrix();
+    glm::mat4 view = camera.getViewMatrix();
+    glm::mat4 model = glm::mat4(1.0f);
+    glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(projection));
+    glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
+    glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+    
+    GLuint thicknessLoc = glGetUniformLocation(shader->program, "thickness");
+    glUniform1f(thicknessLoc,0.02f);
+    glBindVertexArray(VAO);
+    glDrawArrays(shape, 0, static_cast<GLsizei>(vertexNum));
+    glBindVertexArray(0);
+    return;
 }
 Image::Image(std::string resourchPath,const std::vector<Vertex>& faceVertex):Primitive(faceVertex,GL_LINE_LOOP,ShaderBucket["line"].get()){
     
@@ -170,9 +243,56 @@ void Image::LoadNewBand(std::string searchingPath,std::string spectum){
     int width = band->GetXSize(),height = band->GetYSize();
     unsigned short *data = new unsigned short[width * height];
     band->RasterIO(GF_Read, 0, 0, width, height, data, width, height, GDT_UInt16, 0, 0);
-    std::shared_ptr<Matrix> mat = std::make_shared<Matrix>(data,width,height);
+    std::shared_ptr<Spectum> mat = std::make_shared<Spectum>(data,width,height);
     bands.push_back(Band(mat,spectum));
+    GDALClose(dataset);
     delete[] data;
+}
+
+void Image::draw() const{
+    Primitive::draw();
+    if (texture != nullptr)
+        texture->draw();
+}
+void Image::generateTexture(int rind, int gind, int bind){
+    std::vector<unsigned char> RGB;
+    std::shared_ptr<Spectum> rval = bands[rind].value,gval = bands[gind].value,bval = bands[bind].value;
+    const int width = rval->width, height = rval->height;
+    RGB.assign(rval->showData,rval->showData + width * height);
+    RGB.assign(gval->showData,gval->showData + width * height);
+    RGB.assign(bval->showData,bval->showData + width * height);
+    unsigned int textureID;
+    glGenTextures(1, &textureID);
+    glBindTexture(GL_TEXTURE_2D, textureID);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, RGB.data());
+    glGenerateMipmap(GL_TEXTURE_2D);
+    std::vector<glm::vec3> position;
+    for (int index = 0; index < vertexNum; index++)
+        position.push_back(glm::vec3(vertices[index * 6],vertices[index * 6 + 1],vertices[index * 6 + 2]));
+    texture = std::make_shared<Texture>(position,textureID);
+}
+void Image::generateTexture(int singleBand){
+    std::vector<unsigned char> gray;
+    std::shared_ptr<Spectum> value = bands[singleBand].value;
+    const int width = value->width, height = value->height;
+    gray.assign(value->showData,value->showData + width * height);
+    unsigned int textureID;
+    glGenTextures(1, &textureID);
+    glBindTexture(GL_TEXTURE_2D, textureID);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, width, height, 0, GL_RED, GL_UNSIGNED_BYTE, gray.data());
+    glGenerateMipmap(GL_TEXTURE_2D);
+    std::vector<glm::vec3> position;
+    for (int index = 0; index < vertexNum; index++)
+        position.push_back(glm::vec3(vertices[index * 6],vertices[index * 6 + 1],vertices[index * 6 + 2]));
+    texture = std::make_shared<Texture>(position,textureID);
 }
 ROI::ROI(const std::vector<Vertex>& inputVertex):Primitive(inputVertex,GL_LINE_LOOP,ShaderBucket["line"].get()){
     startPosition = inputVertex[0].position;
@@ -216,5 +336,12 @@ void InitResource(GLFWwindow *window){
         line->attchShader(filePath("line.frag"),GL_FRAGMENT_SHADER);
         line->linkProgram();
         ShaderBucket["line"] = std::move(line);
+    }
+    {
+        pShader image (new Shader());
+        image->attchShader(filePath("texture_vertices.vs"),GL_VERTEX_SHADER);
+        image->attchShader(filePath("texture.frag"),GL_FRAGMENT_SHADER);
+        image->linkProgram();
+        ShaderBucket["image"] = std::move(image);
     }
 }

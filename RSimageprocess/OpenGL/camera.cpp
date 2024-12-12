@@ -47,15 +47,14 @@ void Camera2D::zoomInOut(float yOffset) {
         zoom = 1000.0f;
 }
 Camera2D::Camera2D() : position(0.0f, 0.0f), zoom(1.0f){
-    projectionMatrix = glm::ortho(-1000.0f, 1000.0f, -1000.0f, 1000.0f, -1000.0f, 100.0f);
+    projectionMatrix = glm::ortho(-10.0f, 10.0f, -10.0f, 10.0f, -1000.0f, 100.0f);
     viewMatrix = glm::mat4(1.0f);
 }
 void Camera2D::setExtent(Extent extent){
     position.x = (extent.left + extent.right) / 2;
     position.y = (extent.botton + extent.top) / 2;
     GLfloat width = (extent.right - extent.left) * marginRate, height =  (extent.top - extent.botton) * marginRate;
-    WindowParas& windowPara = WindowParas::getInstance();
-    float zoomX = 2000  / width,zoomY = 2000/ height;
+    float zoomX = 20  / width,zoomY = 20/ height;
     zoom = std::min(zoomX,zoomY);
     updateProjectionMatrix(width,height);
     updateViewMatrix();

@@ -14,8 +14,8 @@
             filePath = "RSimageprocess/OpenGL/graphing.cpp"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "164"
-            endingLineNumber = "164"
+            startingLineNumber = "237"
+            endingLineNumber = "237"
             landmarkName = "Image::LoadNewBand(searchingPath, spectum)"
             landmarkType = "7">
          </BreakpointContent>
@@ -30,8 +30,8 @@
             filePath = "RSimageprocess/OpenGL/graphing.cpp"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "174"
-            endingLineNumber = "174"
+            startingLineNumber = "247"
+            endingLineNumber = "247"
             landmarkName = "Image::LoadNewBand(searchingPath, spectum)"
             landmarkType = "7">
          </BreakpointContent>

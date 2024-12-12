@@ -17,30 +17,18 @@
 #include <glm/glm.hpp>
 #include "camera.hpp"
 
-class Matrix{
-    unsigned short **data;
-    size_t width,height;
-public:
-    Matrix(unsigned short* flatd,size_t w,size_t h):width(w),height(h){
-        data = new unsigned short*[height];
-        for (int y = 0; y < height; y++){
-            data[y] = new unsigned short[width];
-            for (int x = 0; x < width; x++)
-                data[y][x] = flatd[y * width + x];
-        }
-    }
-    ~Matrix(){
-        for (size_t h = 0; h < height; h++)
-            delete[] data[h];
-        delete[] data;
-    }
+struct Spectum{
+    unsigned short **rawData;
+    unsigned char *showData;
+    int width,height;
+    Spectum(unsigned short* flatd,int w,int h);
+    ~Spectum();
 };
 struct Vertex {
     glm::vec3 position;
     glm::vec3 color;
 };
 GLchar* filePath(const char* fileName);
-namespace binarytree{class BallPara;}
 class Shader{
 public:
     Shader(const Shader&) = delete;
@@ -70,7 +58,6 @@ public:
         glDeleteBuffers(1,&VBO);
     }
     virtual void draw() const;
-    friend binarytree::BallPara;
     void update();
     Extent getExtent() const{return extent;}
 protected:
@@ -84,21 +71,45 @@ protected:
     glm::mat4 transMat;
     Extent extent;
 };
+class Texture{
+public:
+    Texture(const std::vector<glm::vec3>& inputVertex,GLuint textureID);
+    Texture(const Texture&) = delete;
+    void operator=(const Texture&) = delete;
+    ~Texture(){
+        delete [] vertices;
+        glDeleteVertexArrays(1,&VAO);
+        glDeleteBuffers(1,&VBO);
+    }
+    virtual void draw() const;
+protected:
+    GLuint VAO,VBO,textureID;
+    Shader* shader;
+    GLenum shape;
+    static constexpr GLsizei stride = 5;
+    size_t vertexNum;
+    GLfloat* vertices;
+};
 typedef std::unique_ptr<Shader> pShader;
 extern std::map<std::string,pShader > ShaderBucket;
 void InitResource(GLFWwindow *window);
 
 struct Band{
-    std::shared_ptr<Matrix> value;
-    std::string  spectum;
+    std::shared_ptr<Spectum> value;
+    std::string  wavelength;
 };
 class Image : public Primitive{
     std::vector<Band> bands;
+    std::shared_ptr<Texture> texture;
 public:
-    explicit Image(const std::vector<Vertex>& faceVertex):Primitive(faceVertex,GL_LINE_LOOP,ShaderBucket["line"].get()){}
-    void LoadNewBand(std::string searchingPath,std::string spectum);
+    explicit Image(const std::vector<Vertex>& faceVertex):
+    Primitive(faceVertex,GL_LINE_LOOP,ShaderBucket["line"].get()),texture(nullptr){}
+    void LoadNewBand(std::string searchingPath,std::string wavelength);
     Image(std::string resourchPath,const std::vector<Vertex>& faceVertex);
+    void draw() const override;
     const std::vector<Band>& getBands(){return bands;}
+    void generateTexture(int rind = 2, int gind = 1, int bind = 0);
+    void generateTexture(int singleBand);
 };
 class ROI : public Primitive{
     glm::vec3 startPosition;

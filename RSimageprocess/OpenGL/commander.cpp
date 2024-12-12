@@ -61,7 +61,7 @@ void Layer::BuildLayerStack(){
         int counter = 0;
         for (std::vector<Band>::const_reverse_iterator band = bands.rbegin(); band != bands.rend(); band++){
             std::ostringstream nameOS;
-            nameOS<<"band"<<++counter<<std::setprecision(1)<<":"<<band->spectum<<"mm";
+            nameOS<<"band"<<++counter<<std::setprecision(1)<<":"<<band->wavelength<<"mm";
             if (ImGui::TreeNodeEx(nameOS.str().c_str(), propertyFlag)){
                 ImGui::TreePop();
             }
@@ -88,13 +88,14 @@ void LayerManager::importlayer(std::shared_ptr<BundleParser> parser){
         {glm::vec3(parser->geographic.downleft.x,parser->geographic.downleft.y,0.0),glm::vec3(1.0,1.0,1.0)}
     };
     pLayer newLayer = std::make_shared<Layer>(parser->getFileIdentifer(),faceVertices);
+    std::unique_ptr<Image>& image = std::get<std::unique_ptr<Image>>(newLayer->object);
     for (std::unordered_map<int, std::string>::iterator rasterInfo = parser->TIFFpathParser.begin(); rasterInfo != parser->TIFFpathParser.end(); rasterInfo++){
         std::string imagePath = parser->getBundlePath() + "/" + rasterInfo->second;
-        std::unique_ptr<Image>& image = std::get<std::unique_ptr<Image>>(newLayer->object);
         if (rasterInfo->first > 7)
             continue;
         image->LoadNewBand(imagePath,parser->getWaveLength(rasterInfo->first-1));
     }
+    //image->generateTexture();
     addLayer(newLayer);
     std::cout<<"imported "<<parser->getFileIdentifer()<<std::endl;
 }
