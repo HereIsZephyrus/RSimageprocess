@@ -7,32 +7,48 @@
       <BreakpointProxy
          BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
          <BreakpointContent
-            uuid = "54A4E0A5-860A-41E2-AEE7-E3393B17E97B"
+            uuid = "A91F33C9-FAA9-41BD-A9EA-DD10977A4559"
             shouldBeEnabled = "No"
             ignoreCount = "0"
             continueAfterRunningActions = "No"
-            filePath = "RSimageprocess/OpenGL/graphing.cpp"
+            filePath = "RSimageprocess/OpenGL/commander.cpp"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "237"
-            endingLineNumber = "237"
-            landmarkName = "Image::LoadNewBand(searchingPath, spectum)"
+            startingLineNumber = "98"
+            endingLineNumber = "98"
+            landmarkName = "LayerManager::importlayer(parser)"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
          BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
          <BreakpointContent
-            uuid = "4256A1AB-4EFA-4428-B394-E3C96BDE2DCE"
+            uuid = "2BA1FB07-4CBF-460D-96A7-07F2222199B7"
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "RSimageprocess/OpenGL/graphing.cpp"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "182"
+            endingLineNumber = "182"
+            landmarkName = "Texture::Texture(position, textureID)"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "F79F4669-2F34-4FBB-BAEE-A2C060A002FF"
             shouldBeEnabled = "Yes"
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "RSimageprocess/OpenGL/graphing.cpp"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "247"
-            endingLineNumber = "247"
-            landmarkName = "Image::LoadNewBand(searchingPath, spectum)"
+            startingLineNumber = "255"
+            endingLineNumber = "255"
+            landmarkName = "Image::draw()"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>

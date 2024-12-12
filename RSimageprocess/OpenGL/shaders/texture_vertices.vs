@@ -8,6 +8,6 @@ out vec2 TexCoord;
 
 void main() {
     gl_Position = projection * view * model * vec4(position, 1.0);
-    geoColor = vcolor;
+    TexCoord = texCoord;
 }
 

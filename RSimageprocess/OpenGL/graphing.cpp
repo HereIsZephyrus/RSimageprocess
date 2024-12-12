@@ -102,7 +102,7 @@ void Primitive::initResource(GLenum shp,Shader* inputshader){
     glGenBuffers(1,&VBO);
     glBindVertexArray(VAO);
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * vertexNum * 6, vertices, GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * vertexNum * stride, vertices, GL_STATIC_DRAW);
 
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(GLfloat)*stride, (GLvoid*)0);
     glEnableVertexAttribArray(0);
@@ -116,8 +116,8 @@ Primitive::Primitive(const std::vector<Vertex>& inputVertex,GLenum shp,Shader* i
     vertexNum = inputVertex.size();
     vertices = new GLfloat[vertexNum * stride];
     for (size_t i = 0; i < vertexNum; i++){
-        vertices[i * 6] = inputVertex[i].position[0];        vertices[i * 6 + 1] = inputVertex[i].position[1];        vertices[i * 6 + 2] = inputVertex[i].position[2];
-        vertices[i * 6 + 3] = inputVertex[i].color[0];        vertices[i * 6 + 4] = inputVertex[i].color[1];        vertices[i * 6 + 5] = inputVertex[i].color[2];
+        vertices[i * stride] = inputVertex[i].position[0];        vertices[i * stride + 1] = inputVertex[i].position[1];        vertices[i * stride + 2] = inputVertex[i].position[2];
+        vertices[i * stride + 3] = inputVertex[i].color[0];        vertices[i * stride + 4] = inputVertex[i].color[1];        vertices[i * stride + 5] = inputVertex[i].color[2];
     }
     std::vector<Vertex>::const_iterator vertex = inputVertex.begin();
     extent.left = vertex->position.x;   extent.right = vertex->position.x;
@@ -187,8 +187,8 @@ Texture::Texture(const std::vector<glm::vec3>& position,GLuint textureID):textur
     };
     vertices = new GLfloat[vertexNum * stride];
     for (size_t i = 0; i < vertexNum; i++){
-        vertices[i * 6] = position[i].x;        vertices[i * 6 + 1] = position[i].y;        vertices[i * 6 + 2] = position[i].z;
-        vertices[i * 6 + 3] = locatoin[i].x;    vertices[i * 6 + 4] = locatoin[i].y;
+        vertices[i * stride] = position[i].x;        vertices[i * stride + 1] = position[i].y;        vertices[i * stride + 2] = position[i].z;
+        vertices[i * stride + 3] = locatoin[i].x;    vertices[i * stride + 4] = locatoin[i].y;
     }
     glGenVertexArrays(1,&VAO);
     glGenBuffers(1,&VBO);
@@ -255,12 +255,12 @@ void Image::draw() const{
         texture->draw();
 }
 void Image::generateTexture(int rind, int gind, int bind){
-    std::vector<unsigned char> RGB;
     std::shared_ptr<Spectum> rval = bands[rind].value,gval = bands[gind].value,bval = bands[bind].value;
     const int width = rval->width, height = rval->height;
-    RGB.assign(rval->showData,rval->showData + width * height);
-    RGB.assign(gval->showData,gval->showData + width * height);
-    RGB.assign(bval->showData,bval->showData + width * height);
+    std::vector<unsigned char> RGB(width * height * 3);
+    std::copy(rval->showData,rval->showData + width * height,RGB.begin());
+    std::copy(gval->showData,gval->showData + width * height,RGB.begin() + width * height * 1);
+    std::copy(bval->showData,bval->showData + width * height,RGB.begin() + width * height * 2);
     unsigned int textureID;
     glGenTextures(1, &textureID);
     glBindTexture(GL_TEXTURE_2D, textureID);
@@ -272,7 +272,7 @@ void Image::generateTexture(int rind, int gind, int bind){
     glGenerateMipmap(GL_TEXTURE_2D);
     std::vector<glm::vec3> position;
     for (int index = 0; index < vertexNum; index++)
-        position.push_back(glm::vec3(vertices[index * 6],vertices[index * 6 + 1],vertices[index * 6 + 2]));
+        position.push_back(glm::vec3(vertices[index * stride],vertices[index * stride + 1],vertices[index * stride + 2]));
     texture = std::make_shared<Texture>(position,textureID);
 }
 void Image::generateTexture(int singleBand){
@@ -291,7 +291,7 @@ void Image::generateTexture(int singleBand){
     glGenerateMipmap(GL_TEXTURE_2D);
     std::vector<glm::vec3> position;
     for (int index = 0; index < vertexNum; index++)
-        position.push_back(glm::vec3(vertices[index * 6],vertices[index * 6 + 1],vertices[index * 6 + 2]));
+        position.push_back(glm::vec3(vertices[index * stride],vertices[index * stride + 1],vertices[index * stride + 2]));
     texture = std::make_shared<Texture>(position,textureID);
 }
 ROI::ROI(const std::vector<Vertex>& inputVertex):Primitive(inputVertex,GL_LINE_LOOP,ShaderBucket["line"].get()){

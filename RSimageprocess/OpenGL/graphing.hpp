@@ -73,13 +73,14 @@ protected:
 };
 class Texture{
 public:
-    Texture(const std::vector<glm::vec3>& inputVertex,GLuint textureID);
+    Texture(const std::vector<glm::vec3>& position,GLuint textureID);
     Texture(const Texture&) = delete;
     void operator=(const Texture&) = delete;
     ~Texture(){
         delete [] vertices;
         glDeleteVertexArrays(1,&VAO);
         glDeleteBuffers(1,&VBO);
+        glDeleteTextures(1, &textureID);
     }
     virtual void draw() const;
 protected:

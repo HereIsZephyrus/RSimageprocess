@@ -95,7 +95,7 @@ void LayerManager::importlayer(std::shared_ptr<BundleParser> parser){
             continue;
         image->LoadNewBand(imagePath,parser->getWaveLength(rasterInfo->first-1));
     }
-    //image->generateTexture();
+    image->generateTexture();
     addLayer(newLayer);
     std::cout<<"imported "<<parser->getFileIdentifer()<<std::endl;
 }
