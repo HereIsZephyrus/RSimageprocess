@@ -159,8 +159,8 @@ void Primitive::update(){
 Image::Image(std::string resourchPath,const std::vector<Vertex>& faceVertex):Primitive(faceVertex,GL_LINE_LOOP,ShaderBucket["line"].get()){
     
 }
-void Image::LoadImage(std::string searchingPaht){
-    
+void Image::LoadNewBand(std::string searchingPath,std::string spectum){
+    bands.push_back(Band{Matrix(),spectum});
 }
 ROI::ROI(const std::vector<Vertex>& inputVertex):Primitive(inputVertex,GL_LINE_LOOP,ShaderBucket["line"].get()){
     startPosition = inputVertex[0].position;
@@ -176,6 +176,18 @@ ROIcollection::ROIcollection(std::string resourchPath){
 void ROIcollection::draw(){
     for (std::vector<ROI>::iterator roi = partition.begin(); roi != partition.end(); roi++)
         roi->draw();
+}
+Extent ROIcollection::getExtent() const{
+    std::vector<ROI>::const_iterator part = partition.begin();
+    Extent totalExtent = part->getExtent();
+    for (; part != partition.end(); part++){
+        Extent thisExtent = part->getExtent();
+        totalExtent.left = std::min(totalExtent.left,thisExtent.left);
+        totalExtent.right = std::max(totalExtent.right,thisExtent.right);
+        totalExtent.botton = std::min(totalExtent.botton,thisExtent.botton);
+        totalExtent.top = std::max(totalExtent.top,thisExtent.top);
+    }
+    return totalExtent;
 }
 void InitResource(GLFWwindow *window){
     {

@@ -73,18 +73,14 @@ extern std::map<std::string,pShader > ShaderBucket;
 void InitResource(GLFWwindow *window);
 struct Band{
     Matrix value;
-    float spectum;
+    std::string  spectum;
 };
 class Image : public Primitive{
     std::vector<Band> bands;
     void LoadImage(std::string searchingPath);
 public:
-    Image(const std::vector<Vertex>& inputVertex):Primitive(inputVertex,GL_TRIANGLE_FAN,ShaderBucket["test"].get())//deprecated, just for test
-    {
-        bands.push_back(Band(Matrix(),0.0));
-        bands.push_back(Band(Matrix(),0.0));
-        bands.push_back(Band(Matrix(),0.0));
-    };
+    explicit Image(const std::vector<Vertex>& faceVertex):Primitive(faceVertex,GL_LINE_LOOP,ShaderBucket["line"].get()){}
+    void LoadNewBand(std::string searchingPath,std::string spectum);
     Image(std::string resourchPath,const std::vector<Vertex>& faceVertex);
     const std::vector<Band>& getBands(){return bands;}
 };
@@ -99,5 +95,6 @@ class ROIcollection{
 public:
     ROIcollection(std::string resourchPath);
     void draw();
+    Extent getExtent() const;
 };
 #endif /* graphing_hpp */

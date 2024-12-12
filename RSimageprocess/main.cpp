@@ -30,8 +30,6 @@ int main(int argc, const char * argv[]) {
     Camera2D& camera = Camera2D::getView();
     LayerManager& layerManager = LayerManager::getLayers();
     setTestDataset();
-    pParser parser = std::make_shared<Landsat8BundleParser>("/Users/channingtong/Document/rawTIF/LC08_L2SP_118039_20220315_20220322_02_T1/LC08_L2SP_118039_20220315_20220322_02_T1_MTL.txt");
-    parser->PrintInfo();
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
         glClearColor(0,0,0,0);
@@ -64,16 +62,16 @@ static void Initialization(GLFWwindow *& window){
 }
 void setTestDataset(){
     std::vector<Vertex> test_points{
-        {glm::vec3{115,40,0.0},{1.0,1.0,1.0}},
-        {glm::vec3{120,40,0.0},{1.0,1.0,1.0}},
-        {glm::vec3{120,50,0.0},{1.0,1.0,1.0}},
-        {glm::vec3{115,50,0.0},{1.0,1.0,1.0}}
+        {glm::vec3{40,115,0.0},{1.0,1.0,1.0}},
+        {glm::vec3{40,120,0.0},{1.0,1.0,1.0}},
+        {glm::vec3{50,120,0.0},{1.0,1.0,1.0}},
+        {glm::vec3{50,115,0.0},{1.0,1.0,1.0}}
     };
     std::vector<Vertex> test_points_alter{
-        {glm::vec3{118,42,0.0},{0.0,1.0,1.0}},
-        {glm::vec3{122,42,0.0},{0.0,1.0,1.0}},
-        {glm::vec3{122,52,0.0},{0.0,1.0,1.0}},
-        {glm::vec3{118,52,0.0},{0.0,1.0,1.0}}
+        {glm::vec3{42,118,0.0},{0.0,1.0,1.0}},
+        {glm::vec3{42,122,0.0},{0.0,1.0,1.0}},
+        {glm::vec3{52,122,0.0},{0.0,1.0,1.0}},
+        {glm::vec3{52,118,0.0},{0.0,1.0,1.0}}
     };
     //Layer testlayer(te)
     ROI test(test_points);
@@ -84,4 +82,7 @@ void setTestDataset(){
     layerManager.addLayer(testLayer1);
     layerManager.addLayer(testLayer2);
     camera.setExtent(test.getExtent());
+    pParser parser = std::make_shared<Landsat8BundleParser>("/Users/channingtong/Document/rawTIF/LC08_L2SP_118039_20220315_20220322_02_T1/LC08_L2SP_118039_20220315_20220322_02_T1_MTL.txt");
+    parser->PrintInfo();
+    layerManager.importlayer(parser);
 }

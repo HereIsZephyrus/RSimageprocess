@@ -43,22 +43,26 @@ void Camera2D::zoomInOut(float yOffset) {
     zoom -= yOffset * 0.1f;
     if (zoom < 0.01f)
         zoom = 0.01f;
-    if (zoom > 100.0f)
-        zoom = 100.0f;
+    if (zoom > 1000.0f)
+        zoom = 1000.0f;
 }
 Camera2D::Camera2D() : position(0.0f, 0.0f), zoom(1.0f){
-    projectionMatrix = glm::ortho(-1.0f, 1.0f, -1.0f, 1.0f, -100.0f, 100.0f);
+    projectionMatrix = glm::ortho(-1000.0f, 1000.0f, -1000.0f, 1000.0f, -1000.0f, 100.0f);
     viewMatrix = glm::mat4(1.0f);
 }
 void Camera2D::setExtent(Extent extent){
     position.x = (extent.left + extent.right) / 2;
     position.y = (extent.botton + extent.top) / 2;
-    zoom = 1;
-    updateProjectionMatrix((extent.right - extent.left) * marginRate, (extent.top - extent.botton) * marginRate);
+    GLfloat width = (extent.right - extent.left) * marginRate, height =  (extent.top - extent.botton) * marginRate;
+    WindowParas& windowPara = WindowParas::getInstance();
+    std::cout<<windowPara.SCREEN_WIDTH<<' '<<windowPara.SCREEN_HEIGHT<<std::endl;
+    float zoomX = 2000  / width,zoomY = 2000/ height;
+    zoom = std::min(zoomX,zoomY);
+    updateProjectionMatrix(width,height);
     updateViewMatrix();
 }
 void Camera2D::updateProjectionMatrix(GLfloat width,GLfloat height){
-    projectionMatrix = glm::ortho(-width/2,width/2, - height/2,height/2, -100.0f, 100.0f);
+    //projectionMatrix = glm::ortho(-width/2,width/2, - height/2,height/2, -100.0f, 100.0f);
 }
 void Camera2D::updateViewMatrix() {
     glm::vec3 scaling(zoom, zoom, 1.0f);
