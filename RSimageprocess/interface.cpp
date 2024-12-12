@@ -49,27 +49,40 @@ void Landsat8BundleParser::readTIffPath(){
         return;
     }
     std::string line;
+    bool inGroup = false;
     while (std::getline(mtlFile, line)) {
-        if (line.find("FILE_NAME_BAND_") != std::string::npos) {
-            std::istringstream iss(line);
-            std::string key, value;
-            iss >> key >> value >> value;
-            value = value.substr(1,value.size()-2);
-            if (key.substr(15).size() > 1)
-                continue;
-            int bandNumber = std::stoi(key.substr(15));
-            TIFFpathParser[bandNumber] = value;
+        line.erase(0, line.find_first_not_of(" \t"));
+        line.erase(line.find_last_not_of(" \t") + 1);
+        if (line == "GROUP = PRODUCT_CONTENTS") {
+            inGroup = true;
+            continue;
+        }
+        if (line == "END_GROUP = PRODUCT_CONTENTS") {
+            inGroup = false;
+            continue;
+        }
+        if (inGroup){
+            if (line.find("FILE_NAME_BAND_") != std::string::npos) {
+                std::istringstream iss(line);
+                std::string key, value;
+                iss >> key >> value >> value;
+                value = value.substr(1,value.size()-2);
+                if (key.substr(15).size() > 1)
+                    continue;
+                int bandNumber = std::stoi(key.substr(15));
+                TIFFpathParser[bandNumber] = value;
+            }
         }
     }
     mtlFile.close();
 }
 void Landsat8BundleParser::readProjection(){
     std::ifstream mtlFile(mtlFilePath);
-    std::string line;
     if (!mtlFile.is_open()) {
         std::cerr << "Error: Could not open MTL file." << std::endl;
         return;
     }
+    std::string line;
     bool inGroup = false;
     while (std::getline(mtlFile, line)) {
             line.erase(0, line.find_first_not_of(" \t"));

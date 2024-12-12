@@ -15,10 +15,26 @@
 #include <string>
 #include <map>
 #include <glm/glm.hpp>
-#include <Eigen/Dense>
 #include "camera.hpp"
 
-typedef Eigen::MatrixXd Matrix;
+class Matrix{
+    unsigned short **data;
+    size_t width,height;
+public:
+    Matrix(unsigned short* flatd,size_t w,size_t h):width(w),height(h){
+        data = new unsigned short*[height];
+        for (int y = 0; y < height; y++){
+            data[y] = new unsigned short[width];
+            for (int x = 0; x < width; x++)
+                data[y][x] = flatd[y * width + x];
+        }
+    }
+    ~Matrix(){
+        for (size_t h = 0; h < height; h++)
+            delete[] data[h];
+        delete[] data;
+    }
+};
 struct Vertex {
     glm::vec3 position;
     glm::vec3 color;
@@ -71,13 +87,13 @@ protected:
 typedef std::unique_ptr<Shader> pShader;
 extern std::map<std::string,pShader > ShaderBucket;
 void InitResource(GLFWwindow *window);
+
 struct Band{
-    Matrix value;
+    std::shared_ptr<Matrix> value;
     std::string  spectum;
 };
 class Image : public Primitive{
     std::vector<Band> bands;
-    void LoadImage(std::string searchingPath);
 public:
     explicit Image(const std::vector<Vertex>& faceVertex):Primitive(faceVertex,GL_LINE_LOOP,ShaderBucket["line"].get()){}
     void LoadNewBand(std::string searchingPath,std::string spectum);

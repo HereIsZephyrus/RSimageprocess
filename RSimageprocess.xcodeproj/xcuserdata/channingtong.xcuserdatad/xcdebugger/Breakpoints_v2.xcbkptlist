@@ -7,32 +7,32 @@
       <BreakpointProxy
          BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
          <BreakpointContent
-            uuid = "3AAC966E-D99A-47F7-8A8A-08F3A5FF8147"
+            uuid = "54A4E0A5-860A-41E2-AEE7-E3393B17E97B"
             shouldBeEnabled = "No"
             ignoreCount = "0"
             continueAfterRunningActions = "No"
-            filePath = "RSimageprocess/OpenGL/camera.cpp"
+            filePath = "RSimageprocess/OpenGL/graphing.cpp"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "59"
-            endingLineNumber = "59"
-            landmarkName = "Camera2D::setExtent(extent)"
+            startingLineNumber = "164"
+            endingLineNumber = "164"
+            landmarkName = "Image::LoadNewBand(searchingPath, spectum)"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
          BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
          <BreakpointContent
-            uuid = "66A1F1A9-F843-4895-B9D1-EE3E81E78DAA"
+            uuid = "4256A1AB-4EFA-4428-B394-E3C96BDE2DCE"
             shouldBeEnabled = "Yes"
             ignoreCount = "0"
             continueAfterRunningActions = "No"
-            filePath = "RSimageprocess/OpenGL/commander.cpp"
+            filePath = "RSimageprocess/OpenGL/graphing.cpp"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "164"
-            endingLineNumber = "164"
-            landmarkName = "LayerManager::printLayerTree()"
+            startingLineNumber = "174"
+            endingLineNumber = "174"
+            landmarkName = "Image::LoadNewBand(searchingPath, spectum)"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>

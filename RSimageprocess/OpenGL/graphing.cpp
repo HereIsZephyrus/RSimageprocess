@@ -9,6 +9,7 @@
 #include <sstream>
 #include <iostream>
 #include <gdal.h>
+#include <gdal_priv.h>
 #include "graphing.hpp"
 #include "window.hpp"
 #include "camera.hpp"
@@ -160,7 +161,18 @@ Image::Image(std::string resourchPath,const std::vector<Vertex>& faceVertex):Pri
     
 }
 void Image::LoadNewBand(std::string searchingPath,std::string spectum){
-    bands.push_back(Band{Matrix(),spectum});
+    GDALDataset *dataset = (GDALDataset *) GDALOpen(searchingPath.c_str(), GA_ReadOnly);
+    if (dataset == nullptr) {
+        std::cerr << "Error: Could not open the file." << std::endl;
+        return;
+    }
+    GDALRasterBand *band = dataset->GetRasterBand(1);
+    int width = band->GetXSize(),height = band->GetYSize();
+    unsigned short *data = new unsigned short[width * height];
+    band->RasterIO(GF_Read, 0, 0, width, height, data, width, height, GDT_UInt16, 0, 0);
+    std::shared_ptr<Matrix> mat = std::make_shared<Matrix>(data,width,height);
+    bands.push_back(Band(mat,spectum));
+    delete[] data;
 }
 ROI::ROI(const std::vector<Vertex>& inputVertex):Primitive(inputVertex,GL_LINE_LOOP,ShaderBucket["line"].get()){
     startPosition = inputVertex[0].position;
