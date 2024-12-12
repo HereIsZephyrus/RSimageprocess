@@ -13,6 +13,7 @@
 #include <glm/glm.hpp>
 #include "window.hpp"
 #include "graphing.hpp"
+#include "commander.hpp"
 
 void WindowParas::InitParas(){
     glfwGetWindowContentScale(window, &xScale, &yScale);
@@ -99,73 +100,9 @@ void DrawBasic() {
 }
 void RenderLayerTree(){
     WindowParas& windowPara = WindowParas::getInstance();
-    const ImGuiTreeNodeFlags layerFlag = ImGuiTreeNodeFlags_DefaultOpen;
-    const ImGuiTreeNodeFlags propertyFlag = ImGuiTreeNodeFlags_Leaf;
-    ImGui::BeginChild("Layers",ImVec2(0,windowPara.WINDOW_HEIGHT / 2 / windowPara.yScale));
-    if (ImGui::TreeNodeEx("layer1", layerFlag)){
-        if (ImGui::IsItemClicked()){
-                // Mark rendered node as being clicked
-        }
-        if (ImGui::TreeNodeEx("band1", propertyFlag)){
-            ImGui::TreePop();
-        }
-        if (ImGui::TreeNodeEx("band2", propertyFlag)){
-            ImGui::TreePop();
-        }
-        if (ImGui::TreeNodeEx("band3", propertyFlag)){
-            ImGui::TreePop();
-        }
-        // Call ImGui::TreeNodeEx() recursively to populate each level of children
-        ImGui::TreePop();  // This is required at the end of the if block
-    }
-    if (ImGui::TreeNodeEx("layer1", layerFlag)){
-        if (ImGui::IsItemClicked()){
-                // Mark rendered node as being clicked
-        }
-        if (ImGui::TreeNodeEx("band1", propertyFlag)){
-            ImGui::TreePop();
-        }
-        if (ImGui::TreeNodeEx("band2", propertyFlag)){
-            ImGui::TreePop();
-        }
-        if (ImGui::TreeNodeEx("band3", propertyFlag)){
-            ImGui::TreePop();
-        }
-        // Call ImGui::TreeNodeEx() recursively to populate each level of children
-        ImGui::TreePop();  // This is required at the end of the if block
-    }
-    if (ImGui::TreeNodeEx("layer1", layerFlag)){
-        if (ImGui::IsItemClicked()){
-                // Mark rendered node as being clicked
-        }
-        if (ImGui::TreeNodeEx("band1", propertyFlag)){
-            ImGui::TreePop();
-        }
-        if (ImGui::TreeNodeEx("band2", propertyFlag)){
-            ImGui::TreePop();
-        }
-        if (ImGui::TreeNodeEx("band3", propertyFlag)){
-            ImGui::TreePop();
-        }
-        // Call ImGui::TreeNodeEx() recursively to populate each level of children
-        ImGui::TreePop();  // This is required at the end of the if block
-    }
-    if (ImGui::TreeNodeEx("layer1", layerFlag)){
-        if (ImGui::IsItemClicked()){
-                // Mark rendered node as being clicked
-        }
-        if (ImGui::TreeNodeEx("band1", propertyFlag)){
-            ImGui::TreePop();
-        }
-        if (ImGui::TreeNodeEx("band2", propertyFlag)){
-            ImGui::TreePop();
-        }
-        if (ImGui::TreeNodeEx("band3", propertyFlag)){
-            ImGui::TreePop();
-        }
-        // Call ImGui::TreeNodeEx() recursively to populate each level of children
-        ImGui::TreePop();  // This is required at the end of the if block
-    }
+    ImGui::BeginChild("Layers",ImVec2(0,windowPara.WINDOW_HEIGHT / 3));
+    LayerManager& layerManager = LayerManager::getLayers();
+    layerManager.printLayerTree();
     ImGui::EndChild();
 }
 }

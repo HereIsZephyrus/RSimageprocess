@@ -8,6 +8,7 @@
 #include <fstream>
 #include <sstream>
 #include <iostream>
+#include <gdal.h>
 #include "graphing.hpp"
 #include "window.hpp"
 #include "camera.hpp"
@@ -97,6 +98,15 @@ Primitive::Primitive(const std::vector<Vertex>& inputVertex,GLenum shp,Shader* i
         vertices[i * 6] = inputVertex[i].position[0];        vertices[i * 6 + 1] = inputVertex[i].position[1];        vertices[i * 6 + 2] = inputVertex[i].position[2];
         vertices[i * 6 + 3] = inputVertex[i].color[0];        vertices[i * 6 + 4] = inputVertex[i].color[1];        vertices[i * 6 + 5] = inputVertex[i].color[2];
     }
+    std::vector<Vertex>::const_iterator vertex = inputVertex.begin();
+    extent.left = vertex->position.x;   extent.right = vertex->position.x;
+    extent.botton = vertex->position.y;   extent.top = vertex->position.y;
+    for (; vertex != inputVertex.end(); vertex++){
+        extent.left = std::min(extent.left,vertex->position.x);
+        extent.right = std::max(extent.right,vertex->position.x);
+        extent.botton = std::min(extent.botton,vertex->position.y);
+        extent.top = std::max(extent.top,vertex->position.y);
+    }
     initResource(shp,inputshader);
 }
 Primitive::Primitive(const Vertex& inputVertex,GLenum shp,Shader* inputshader){
@@ -104,6 +114,8 @@ Primitive::Primitive(const Vertex& inputVertex,GLenum shp,Shader* inputshader){
     vertices = new GLfloat[vertexNum * stride];
     vertices[0] = inputVertex.position[0];        vertices[1] = inputVertex.position[1];        vertices[2] = inputVertex.position[2];
     vertices[3] = inputVertex.color[0];        vertices[4] = inputVertex.color[1];        vertices[5] = inputVertex.color[2];
+    extent.left = inputVertex.position.x;   extent.right = inputVertex.position.x + 1;
+    extent.botton = inputVertex.position.y;   extent.top = inputVertex.position.y + 1;
     initResource(shp,inputshader);
 }
 void Primitive::draw() const {
@@ -144,18 +156,11 @@ void Primitive::update(){
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindVertexArray(0);
 }
-Image::Image(const std::vector<Vertex>& inputVertex):Primitive(inputVertex,GL_LINE_LOOP,ShaderBucket["line"].get()){
-    std::vector<Vertex>::const_iterator vertex = inputVertex.begin();
-    extent.left = vertex->position.x;   extent.right = vertex->position.x;
-    extent.botton = vertex->position.y;   extent.top = vertex->position.y;
-    for (; vertex != inputVertex.end(); vertex++){
-        extent.left = std::min(extent.left,vertex->position.x);
-        extent.right = std::max(extent.right,vertex->position.x);
-        extent.botton = std::min(extent.botton,vertex->position.y);
-        extent.top = std::max(extent.top,vertex->position.y);
-    }
-    //glm::vec3 mapPosition = {(extent.left + extent.right) / 2,(extent.botton + extent.top) / 2,0.0};
-    //transMat = glm::translate(transMat, -mapPosition);
+Image::Image(std::string resourchPath,const std::vector<Vertex>& faceVertex):Primitive(faceVertex,GL_LINE_LOOP,ShaderBucket["line"].get()){
+    
+}
+void Image::LoadImage(std::string searchingPaht){
+    
 }
 ROI::ROI(const std::vector<Vertex>& inputVertex):Primitive(inputVertex,GL_LINE_LOOP,ShaderBucket["line"].get()){
     startPosition = inputVertex[0].position;
@@ -164,6 +169,13 @@ ROI::ROI(const std::vector<Vertex>& inputVertex):Primitive(inputVertex,GL_LINE_L
 ROI::ROI(const Vertex& inputVertex):Primitive(inputVertex,GL_LINE_LOOP,ShaderBucket["line"].get()){
     startPosition = inputVertex.position;
     
+}
+ROIcollection::ROIcollection(std::string resourchPath){
+    
+}
+void ROIcollection::draw(){
+    for (std::vector<ROI>::iterator roi = partition.begin(); roi != partition.end(); roi++)
+        roi->draw();
 }
 void InitResource(GLFWwindow *window){
     {

@@ -15,8 +15,10 @@
 #include <string>
 #include <map>
 #include <glm/glm.hpp>
+#include <Eigen/Dense>
 #include "camera.hpp"
 
+typedef Eigen::MatrixXd Matrix;
 struct Vertex {
     glm::vec3 position;
     glm::vec3 color;
@@ -54,6 +56,7 @@ public:
     virtual void draw() const;
     friend binarytree::BallPara;
     void update();
+    Extent getExtent() const{return extent;}
 protected:
     void initResource(GLenum shp,Shader* inputshader);
     GLuint VAO,VBO;
@@ -63,20 +66,38 @@ protected:
     size_t vertexNum;
     GLfloat* vertices;
     glm::mat4 transMat;
+    Extent extent;
 };
 typedef std::unique_ptr<Shader> pShader;
 extern std::map<std::string,pShader > ShaderBucket;
 void InitResource(GLFWwindow *window);
+struct Band{
+    Matrix value;
+    float spectum;
+};
 class Image : public Primitive{
-    Extent extent;
+    std::vector<Band> bands;
+    void LoadImage(std::string searchingPath);
 public:
-    Image(const std::vector<Vertex>& inputVertex);
-    Extent getExtent() const{return extent;}
+    Image(const std::vector<Vertex>& inputVertex):Primitive(inputVertex,GL_TRIANGLE_FAN,ShaderBucket["test"].get())//deprecated, just for test
+    {
+        bands.push_back(Band(Matrix(),0.0));
+        bands.push_back(Band(Matrix(),0.0));
+        bands.push_back(Band(Matrix(),0.0));
+    };
+    Image(std::string resourchPath,const std::vector<Vertex>& faceVertex);
+    const std::vector<Band>& getBands(){return bands;}
 };
 class ROI : public Primitive{
     glm::vec3 startPosition;
 public:
     ROI(const std::vector<Vertex>& inputVertex);
     ROI(const Vertex& inputVertex);
+};
+class ROIcollection{
+    std::vector<ROI> partition;
+public:
+    ROIcollection(std::string resourchPath);
+    void draw();
 };
 #endif /* graphing_hpp */
