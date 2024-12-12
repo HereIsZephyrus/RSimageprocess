@@ -18,19 +18,20 @@
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
+#include "gdal_priv.h"
+#include "gdal.h"
+#include "interface.hpp"
 
+static void Initialization(GLFWwindow *&window);
 static void setTestDataset();
 int main(int argc, const char * argv[]) {
     GLFWwindow *& window = WindowParas::getInstance().window;
-    if (!HAS_INIT_OPENGL_CONTEXT && initOpenGL(window,"2025Autumn数字图像处理") != 0)
-        return -1;
-    InitResource(window);
-    gui::Initialization(window);
-    BufferRecorder& buffer = BufferRecorder::getBuffer();
+    Initialization(window);
     Camera2D& camera = Camera2D::getView();
-    buffer.initIO(window);
     LayerManager& layerManager = LayerManager::getLayers();
     setTestDataset();
+    pParser parser = std::make_shared<Landsat8BundleParser>("/Users/channingtong/Document/rawTIF/LC08_L2SP_118039_20220315_20220322_02_T1/LC08_L2SP_118039_20220315_20220322_02_T1_MTL.txt");
+    parser->PrintInfo();
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
         glClearColor(0,0,0,0);
@@ -50,7 +51,18 @@ int main(int argc, const char * argv[]) {
     //WindowParas::getInstance().window = nullptr;
     return 0;
 }
-static void setTestDataset(){
+static void Initialization(GLFWwindow *& window){
+    if (!HAS_INIT_OPENGL_CONTEXT && initOpenGL(window,"2025Autumn数字图像处理") != 0){
+        std::cout<<"init OpenGL failed"<<std::endl;
+        return;
+    }
+    InitResource(window);
+    gui::Initialization(window);
+    BufferRecorder& buffer = BufferRecorder::getBuffer();
+    buffer.initIO(window);
+    GDALAllRegister();
+}
+void setTestDataset(){
     std::vector<Vertex> test_points{
         {glm::vec3{115,40,0.0},{1.0,1.0,1.0}},
         {glm::vec3{120,40,0.0},{1.0,1.0,1.0}},

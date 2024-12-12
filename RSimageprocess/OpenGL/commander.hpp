@@ -21,6 +21,7 @@
 #include "imgui_impl_opengl3.h"
 #include "graphing.hpp"
 #include "camera.hpp"
+#include "../interface.hpp"
 class BufferRecorder{
 public:
     static BufferRecorder& getBuffer(){
@@ -76,6 +77,9 @@ public:
     }
     void addLayer(pLayer newLayer);
     void addLayer(std::string resourcePath, LayerType layerType);
+    void importlayer(const Landsat8BundleParser& parser){
+        
+    }
     void removeLayer(pLayer deleteLayer);
     void moveLayerUp(pLayer swapLayer);
     void moveLayerDown(pLayer swapLayer);
