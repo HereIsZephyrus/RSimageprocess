@@ -125,6 +125,8 @@ void LayerManager::importlayer(std::shared_ptr<BundleParser> parser){
     }
     image->generateTexture();
     addLayer(newLayer);
+    Camera2D& camera = Camera2D::getView();
+    camera.setExtent(newLayer->getExtent());
     std::cout<<"imported "<<parser->getFileIdentifer()<<std::endl;
 }
 void LayerManager::removeLayer(pLayer deleteLayer) {

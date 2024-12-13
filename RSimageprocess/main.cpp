@@ -35,8 +35,9 @@ int main(int argc, const char * argv[]) {
         glClearColor(0,0,0,0);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         gui::DrawBasic();
-        camera.processKeyboard(window);
         layerManager.Draw();
+        if (!gui::DrawPopup())
+            camera.processKeyboard(window);
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
         glfwSwapBuffers(window);
@@ -75,12 +76,9 @@ void setTestDataset(){
     ROI test(test_points);
     LayerManager& layerManager = LayerManager::getLayers();
     Camera2D& camera = Camera2D::getView();
-    pParser parser = std::make_shared<Landsat8BundleParser>("/Users/channingtong/Document/rawTIF/LC08_L2SP_118039_20220315_20220322_02_T1/LC08_L2SP_118039_20220315_20220322_02_T1_MTL.txt");
-    parser->PrintInfo();
     std::shared_ptr<Layer> testLayer1 = std::make_shared<Layer>("testLayer1",test_points);
     std::shared_ptr<Layer> testLayer2 = std::make_shared<Layer>("testLayer2",test_points_alter);
     layerManager.addLayer(testLayer1);
     layerManager.addLayer(testLayer2);
     camera.setExtent(test.getExtent());
-    layerManager.importlayer(parser);
 }

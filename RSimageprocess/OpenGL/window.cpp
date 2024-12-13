@@ -74,6 +74,7 @@ int initOpenGL(GLFWwindow *&window,std::string windowName) {
 }
 namespace gui {
 ImFont *englishFont = nullptr,*chineseFont = nullptr;
+bool toImportImage = false,toShowStatistic = false,toShowManageBand = false,toImportROI = false;
 int Initialization(GLFWwindow *window) {
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
@@ -101,6 +102,21 @@ void DrawBasic() {
     ImGui::End();
     return;
 }
+bool DrawPopup(){
+    if (toImportImage){
+        ImportImage();
+        return true;
+    }
+    if (toShowStatistic){
+        ShowStatistic();
+        return true;
+    }
+    if (toShowManageBand){
+        ManageBands();
+        return true;
+    }
+    return false;
+}
 void RenderLayerTree(){
     WindowParas& windowPara = WindowParas::getInstance();
     ImGui::BeginChild("Layers",ImVec2(0,windowPara.WINDOW_HEIGHT / 3));
@@ -117,39 +133,31 @@ void RenderWorkspace(){
     style.FramePadding = ImVec2(8.0f, 4.0f);
     style.ItemSpacing = ImVec2(16.0f, 8.0f);
     ImGui::PushFont(gui::chineseFont);
-    if (ImGui::Button("导入遥感影像",ButtonSize)){
-        
-    }
+    if (ImGui::Button("导入遥感影像",ButtonSize))
+        toImportImage = true;
     ImGui::SameLine();
-    if (ImGui::Button("导入ROI",ButtonSize)){
-        
-    }
+    if (ImGui::Button("导入ROI",ButtonSize))
+        toImportROI = true;
     if (buffer.selectedLayer != nullptr){
         if (buffer.selectedLayer->getType() == LayerType::raster){
             std::string visbleButtonStr = "隐藏图层";
             if (!buffer.selectedLayer->getVisble())
                 visbleButtonStr = "显示图层";
-            if (ImGui::Button(visbleButtonStr.c_str(),ButtonSize)){
+            if (ImGui::Button(visbleButtonStr.c_str(),ButtonSize))
                 buffer.selectedLayer->toggleVisble();
-            }
             ImGui::SameLine();
-            if (ImGui::Button("导出影像",ButtonSize)){
+            if (ImGui::Button("导出影像",ButtonSize))
                 buffer.selectedLayer->exportImage();
-            }
-            if (ImGui::Button("查看信息",ButtonSize)){
-                buffer.selectedLayer->showStatistic();
-            }
+            if (ImGui::Button("查看信息",ButtonSize))
+                toShowStatistic = true;
             ImGui::SameLine();
-            if (ImGui::Button("波段重组",ButtonSize)){
-                buffer.selectedLayer->manageBands();
-            }
-            if (ImGui::Button("直方图均衡化",ButtonSize)){
+            if (ImGui::Button("波段重组",ButtonSize))
+                toShowManageBand = true;
+            if (ImGui::Button("直方图均衡化",ButtonSize))
                 buffer.selectedLayer->averageBands();
-            }
             ImGui::SameLine();
-            if (ImGui::Button("对比度拉伸",ButtonSize)){
+            if (ImGui::Button("对比度拉伸",ButtonSize))
                 buffer.selectedLayer->strechBands();
-            }
             if (ImGui::Button("频域滤波",ButtonSize)){
                 
             }
@@ -163,5 +171,41 @@ void RenderWorkspace(){
     style.ItemSpacing = ImVec2(8.0f, 4.0f);
     ImGui::PopFont();
     ImGui::EndChild();
+}
+void ImportImage(){
+    static char inputBuffer[256] = "";
+    ImGui::PushFont(gui::chineseFont);
+    ImGui::OpenPopup("Import Image");
+    ImVec2 pos = ImGui::GetMainViewport()->GetCenter();
+    ImGui::SetNextWindowPos(pos);
+    if (ImGui::BeginPopup("Import Image")) {
+        ImGui::Text("输入遥感集MTL文件");
+        ImGui::InputText("##input", inputBuffer, sizeof(inputBuffer));
+        if (ImGui::Button("OK")) {
+            pParser parser = std::make_shared<Landsat8BundleParser>(inputBuffer);
+            parser->PrintInfo();
+            LayerManager& layerManager = LayerManager::getLayers();
+            layerManager.importlayer(parser);
+            inputBuffer[0] = '\0';
+            toImportImage = false;
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Cancel")) {
+            inputBuffer[0] = '\0';
+            toImportImage = false;
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::EndPopup();
+    }
+    ImGui::PopFont();
+}
+void ShowStatistic(){
+    BufferRecorder& buffer = BufferRecorder::getBuffer();
+    buffer.selectedLayer->showStatistic();
+}
+void ManageBands(){
+    BufferRecorder& buffer = BufferRecorder::getBuffer();
+    buffer.selectedLayer->manageBands();
 }
 }
