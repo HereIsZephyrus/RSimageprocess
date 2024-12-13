@@ -147,23 +147,24 @@ void LayerManager::moveLayerDown(pLayer swapLayer) {
 void LayerManager::printLayerTree(){
     pLayer current = head;
     const ImGuiTreeNodeFlags layerFlag = ImGuiTreeNodeFlags_DefaultOpen;
-    //ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.4f, 0.6f, 0.8f, 1.0f));
-    //ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.5f, 0.7f, 1.0f, 1.0f));
-    //ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.3f, 0.5f, 0.7f, 1.0f));
     while (current != nullptr){
         bool isOpen = ImGui::TreeNodeEx(current->getName().c_str(), layerFlag);
         ImGui::SameLine();
-        if (ImGui::ArrowButton(std::string("##UpArrow"+ current->getName()).c_str(), ImGuiDir_Up)){
+        if (ImGui::ArrowButton(std::string("##UpArrow"+ current->getName()).c_str(), ImGuiDir_Up))
             moveLayerUp(current);
-        }
         ImGui::SameLine();
-        if (ImGui::ArrowButton(std::string("##DownArrow" + current->getName()).c_str(), ImGuiDir_Down)){
+        if (ImGui::ArrowButton(std::string("##DownArrow" + current->getName()).c_str(), ImGuiDir_Down))
             moveLayerDown(current);
-        }
         ImGui::SameLine();
-        if (ImGui::ArrowButton(std::string("##RightArrow" + current->getName()).c_str(), ImGuiDir_Right)){
+        if (ImGui::ArrowButton(std::string("##RightArrow" + current->getName()).c_str(), ImGuiDir_Right))
             Camera2D::getView().setExtent(current->getExtent());
-        }
+        ImGui::SameLine();
+        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(1.0f, 0.0f, 0.0f, 1.0f));
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(1.0f, 0.5f, 0.5f, 1.0f));
+        ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(1.0f, 0.2f, 0.2f, 1.0f));
+        if (ImGui::Button(std::string("Del " + current->getName()).c_str()))
+            removeLayer(current);
+        ImGui::PopStyleColor(3);
         if (isOpen){
             if (ImGui::IsItemClicked()){}
             current->BuildLayerStack();
@@ -171,7 +172,6 @@ void LayerManager::printLayerTree(){
         }
         current = current->next;
     }
-    //ImGui::PopStyleColor(3);
 }
 void LayerManager::Draw(){
     pLayer current = tail;

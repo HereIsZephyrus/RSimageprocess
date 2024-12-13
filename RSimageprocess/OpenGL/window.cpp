@@ -85,7 +85,7 @@ int Initialization(GLFWwindow *window) {
     englishFont = io.Fonts->AddFontFromFileTTF("/Users/channingtong/Program/RSimageprocess/ImGUIopengl3/Arial.ttf", 18.0f, nullptr, io.Fonts->GetGlyphRangesDefault());
     chineseFont = io.Fonts->AddFontFromFileTTF("/Users/channingtong/Program/RSimageprocess/ImGUIopengl3/Songti.ttc", 18.0f,nullptr,io.Fonts->GetGlyphRangesChineseSimplifiedCommon());
     io.Fonts->Build();
-    return  0;
+    return 0;
 }
 
 void DrawBasic() {
