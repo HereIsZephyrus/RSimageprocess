@@ -114,18 +114,13 @@ Spectum::Spectum(unsigned short* flatd,int w,int h):width(w),height(h){
     }
 }
 Spectum::Spectum(const cv::Mat& image){
-    //cv::Mat padded_image;
-    //cv::copyMakeBorder(image, padded_image, 0, 0, 0, 140, cv::BORDER_CONSTANT, cv::Scalar(0));
     width = image.cols; height = image.rows;
-    //cv::imshow("raw image", image);
-    //cv::waitKey(0);
     validRange[0].x  = width + 1; // left
     validRange[1].y = 0; // top
     validRange[2].x = 0; // right
     validRange[3].y  = height + 1; // botton
     if (width % 2) width--;
     if (height%2)height--;
-    //cv::Mat newImage(height,width,CV_8U);
     rawData = new unsigned short*[height];
     showData = new unsigned char[width * height];
     for (int y = 0; y < height; y++){
@@ -134,7 +129,6 @@ Spectum::Spectum(const cv::Mat& image){
             int loc = y * width + x;
             rawData[y][x] = image.at<ushort>(y,x);
             showData[loc] = rawData[y][x] * 255 / 65535;
-            //newImage.at<uchar>(y,x) = showData[loc];
             if (rawData[y][x] == 0)
                 continue;
             if (x < validRange[0].x){
@@ -155,8 +149,6 @@ Spectum::Spectum(const cv::Mat& image){
             }
         }
     }
-    //cv::imshow("new image", newImage);
-    //cv::waitKey(0);
     for (int i = 0; i < 4; i++){
         validRange[i].x /= width;
         validRange[i].y /= height;
