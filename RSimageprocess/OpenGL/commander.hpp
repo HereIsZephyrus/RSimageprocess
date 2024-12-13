@@ -28,7 +28,7 @@ enum class LayerType{
 };
 class LayerManager;
 class Layer{
-    //std::variant<std::unique_ptr<Image>,std::unique_ptr<ROIcollection>> object;
+    std::variant<std::unique_ptr<Image>,std::unique_ptr<ROIcollection>> object;
     std::string name;
     LayerType type;
     bool visble;
@@ -43,7 +43,6 @@ public:
     name(layerName),prev(nullptr),next(nullptr),type(LayerType::raster),visble(true){
         object = std::make_unique<Image>(vertices);
     }
-    std::variant<std::unique_ptr<Image>,std::unique_ptr<ROIcollection>> object;
     void Draw();
     bool BuildLayerStack();
     std::string getName() const{return name;}
@@ -56,6 +55,12 @@ public:
     }
     LayerType getType() const {return type;}
     bool getVisble() const {return visble;}
+    void toggleVisble() {visble = !visble;}
+    void showStatistic() const;
+    void exportImage() const;
+    void manageBands();
+    void averageBands();
+    void strechBands();
 };
 class LayerManager{
     using pLayer = std::shared_ptr<Layer>;

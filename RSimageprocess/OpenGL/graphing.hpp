@@ -98,22 +98,40 @@ typedef std::unique_ptr<Shader> pShader;
 extern std::map<std::string,pShader > ShaderBucket;
 void InitResource(GLFWwindow *window);
 
+class TextureManager{
+using pTexture = std::shared_ptr<Texture>;
+    pTexture texture;
+public:
+    TextureManager(pTexture texturePtr) : texture(texturePtr),rind(3),gind(2),bind(1){}
+    int rind, gind, bind;
+    void draw() const{
+        if (texture != nullptr)
+            texture->draw();
+    }
+    void manage();
+    void average();
+    void strech();
+    void deleteTexture() {texture = nullptr;}
+    void createtexture(pTexture texturePtr) {texture = texturePtr;}
+};
 struct Band{
     std::shared_ptr<Spectum> value;
     std::string  wavelength;
 };
 class Image : public Primitive{
     std::vector<Band> bands;
-    std::shared_ptr<Texture> texture;
+    TextureManager textureManager;
 public:
     explicit Image(const std::vector<Vertex>& faceVertex):
-    Primitive(faceVertex,GL_LINE_LOOP,ShaderBucket["line"].get()),texture(nullptr){}
+    Primitive(faceVertex,GL_LINE_LOOP,ShaderBucket["line"].get()),textureManager(nullptr){}
     void LoadNewBand(std::string searchingPath,std::string wavelength);
-    Image(std::string resourchPath,const std::vector<Vertex>& faceVertex);
     void draw() const override;
     const std::vector<Band>& getBands(){return bands;}
-    void generateTexture(int rind = 3, int gind = 2, int bind = 1);
-    void generateTexture(int singleBand);
+    void generateTexture();
+    void exportImage() const;
+    void manageBands() {textureManager.manage();}
+    void averageBands() {textureManager.average();}
+    void strechBands() {textureManager.strech();}
 };
 class ROI : public Primitive{
     glm::vec3 startPosition;

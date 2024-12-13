@@ -113,42 +113,42 @@ void RenderWorkspace(){
     BufferRecorder& buffer = BufferRecorder::getBuffer();
     ImGui::BeginChild("Workspace",ImVec2(0,windowPara.WINDOW_HEIGHT / 3));
     ImGuiStyle& style = ImGui::GetStyle();
+    const ImVec2 ButtonSize = ImVec2(windowPara.SIDEBAR_WIDTH * 3 / 7, 50);
     style.FramePadding = ImVec2(8.0f, 4.0f);
     style.ItemSpacing = ImVec2(16.0f, 8.0f);
     ImGui::PushFont(gui::chineseFont);
-    if (ImGui::Button("导入遥感影像")){
+    if (ImGui::Button("导入遥感影像",ButtonSize)){
         
     }
     ImGui::SameLine();
-    if (ImGui::Button("导入ROI")){
+    if (ImGui::Button("导入ROI",ButtonSize)){
         
     }
     if (buffer.selectedLayer != nullptr){
-        const ImVec2 ButtonSize = ImVec2(windowPara.SIDEBAR_WIDTH * 3 / 7, 50);
         if (buffer.selectedLayer->getType() == LayerType::raster){
             std::string visbleButtonStr = "隐藏图层";
             if (!buffer.selectedLayer->getVisble())
                 visbleButtonStr = "显示图层";
             if (ImGui::Button(visbleButtonStr.c_str(),ButtonSize)){
-                
+                buffer.selectedLayer->toggleVisble();
             }
             ImGui::SameLine();
             if (ImGui::Button("导出影像",ButtonSize)){
-                
+                buffer.selectedLayer->exportImage();
             }
-            if (ImGui::Button("查看元信息",ButtonSize)){
-                
+            if (ImGui::Button("查看信息",ButtonSize)){
+                buffer.selectedLayer->showStatistic();
             }
             ImGui::SameLine();
-            if (ImGui::Button("统计波段信息",ButtonSize)){
-                
+            if (ImGui::Button("波段重组",ButtonSize)){
+                buffer.selectedLayer->manageBands();
             }
             if (ImGui::Button("直方图均衡化",ButtonSize)){
-                
+                buffer.selectedLayer->averageBands();
             }
             ImGui::SameLine();
             if (ImGui::Button("对比度拉伸",ButtonSize)){
-                
+                buffer.selectedLayer->strechBands();
             }
             if (ImGui::Button("频域滤波",ButtonSize)){
                 

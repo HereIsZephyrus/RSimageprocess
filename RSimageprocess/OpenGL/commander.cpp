@@ -76,6 +76,29 @@ bool Layer::BuildLayerStack(){
     }
     return clicked;
 }
+void Layer::showStatistic() const{
+    
+}
+void Layer::exportImage() const{
+    if (type != LayerType::raster)
+        return;
+    std::get<std::unique_ptr<Image>>(object)->exportImage();
+}
+void Layer::manageBands() {
+    if (type != LayerType::raster)
+        return;
+    std::get<std::unique_ptr<Image>>(object)->manageBands();
+}
+void Layer::averageBands() {
+    if (type != LayerType::raster)
+        return;
+    std::get<std::unique_ptr<Image>>(object)->averageBands();
+}
+void Layer::strechBands(){
+    if (type != LayerType::raster)
+        return;
+    std::get<std::unique_ptr<Image>>(object)->averageBands();
+}
 void LayerManager::addLayer(pLayer newLayer) {
     if (head == nullptr) {
         head = tail = newLayer;
