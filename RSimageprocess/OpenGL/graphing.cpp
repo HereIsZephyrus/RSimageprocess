@@ -292,8 +292,57 @@ void Texture::draw() const {
     glBindVertexArray(0);
     return;
 }
-Image::Image(std::string resourchPath,const std::vector<Vertex>& faceVertex):Primitive(faceVertex,GL_LINE_LOOP,ShaderBucket["line"].get()){
+void TextureManager::manage(){
     
+}
+void TextureManager::average(){
+    
+}
+void TextureManager::strech(){
+    
+}
+void Image::manageBands() {
+    if (textureManager.pointIndex > 2){
+        deleteTexture();
+        generateTexture();
+        gui::toShowManageBand = false;
+        return;
+    }
+    constexpr std::string colormap[3] = {"red","green","blue"};
+    ImGui::OpenPopup("Manage Bands");
+    ImVec2 pos = ImGui::GetMainViewport()->GetCenter();
+    ImGui::SetNextWindowPos(pos);
+    if (ImGui::BeginPopup("Manage Bands")) {
+        std::string selectInfo = "Select the " + colormap[textureManager.pointIndex] + " band:";
+        ImGui::Text("%s", selectInfo.c_str());
+        int counter = 0;
+        std::vector<std::string> bandStrVec;
+        for (std::vector<Band>::const_reverse_iterator band = bands.rbegin(); band != bands.rend(); band++){
+            std::ostringstream nameOS;
+            nameOS<<"band"<<++counter<<std::setprecision(1)<<":"<<band->wavelength<<"mm";
+            bandStrVec.push_back(nameOS.str());
+        }
+        std::vector<const char*> bandCharVec;
+        for (std::vector<std::string>::const_iterator bandStr = bandStrVec.begin(); bandStr != bandStrVec.end(); bandStr++)
+            bandCharVec.push_back(bandStr->c_str());
+        int selectedItem = -1;
+        if (ImGui::ListBox("##loaded bands", &selectedItem, bandCharVec.data(), static_cast<int>(bandCharVec.size()), 7)){
+            textureManager.RGBindex[textureManager.pointIndex] = selectedItem;
+            ++textureManager.pointIndex;
+        }
+        ImGui::EndPopup();
+    }
+    textureManager.manage();
+}
+void Image::exportImage() const{
+    
+}
+std::string Image::getIndicator(int index){
+    std::string indicator = "";
+    if (textureManager.RGBindex[0] == index)    return "(R)";
+    if (textureManager.RGBindex[1] == index)    return "(G)";
+    if (textureManager.RGBindex[2] == index)    return "(B)";
+    return indicator;
 }
 void Image::LoadNewBand(std::string searchingPath,std::string spectum){
     cv::Mat image = cv::imread(searchingPath.c_str(),cv::IMREAD_UNCHANGED);
@@ -318,11 +367,12 @@ void Image::LoadNewBand(std::string searchingPath,std::string spectum){
 
 void Image::draw() const{
     Primitive::draw();
-    if (texture != nullptr)
-        texture->draw();
+    textureManager.draw();
 }
-void Image::generateTexture(int rind, int gind, int bind){
-    std::shared_ptr<Spectum> rval = bands[rind].value,gval = bands[gind].value,bval = bands[bind].value;
+void Image::generateTexture(){
+    std::shared_ptr<Spectum> rval = bands[textureManager.RGBindex[0]].value;
+    std::shared_ptr<Spectum> gval = bands[textureManager.RGBindex[1]].value;
+    std::shared_ptr<Spectum> bval = bands[textureManager.RGBindex[2]].value;
     const int width = rval->width, height = rval->height, num = width * height;
     uint8_t *RGB = new unsigned char[num * 3];
     for (int i = 0; i < num; i++){
@@ -345,31 +395,10 @@ void Image::generateTexture(int rind, int gind, int bind){
         position.push_back(glm::vec3(vertices[index * stride],vertices[index * stride + 1],vertices[index * stride + 2]));
         texturePos.push_back(rval->validRange[index]);
     }
-    texture = std::make_shared<Texture>(position,texturePos,textureID);
+    std::shared_ptr<Texture> texture = std::make_shared<Texture>(position,texturePos,textureID);
+    textureManager.createtexture(texture);
     delete[] RGB;
     glBindTexture(GL_TEXTURE_2D, 0);
-}
-void Image::generateTexture(int singleBand){
-    std::vector<unsigned char> gray;
-    std::shared_ptr<Spectum> value = bands[singleBand].value;
-    const int width = value->width, height = value->height;
-    gray.assign(value->showData,value->showData + width * height);
-    unsigned int textureID;
-    glGenTextures(1, &textureID);
-    glBindTexture(GL_TEXTURE_2D, textureID);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_R8, width, height, 0, GL_R8, GL_UNSIGNED_BYTE, gray.data());
-    glGenerateMipmap(GL_TEXTURE_2D);
-    std::vector<glm::vec3> position;
-    std::vector<glm::vec2> texturePos;
-    for (int index = 0; index < vertexNum ; index++){
-        position.push_back(glm::vec3(vertices[index * stride],vertices[index * stride + 1],vertices[index * stride + 2]));
-        texturePos.push_back(value->validRange[index]);
-    }
-    texture = std::make_shared<Texture>(position,texturePos,textureID);
 }
 ROI::ROI(const std::vector<Vertex>& inputVertex):Primitive(inputVertex,GL_LINE_LOOP,ShaderBucket["line"].get()){
     startPosition = inputVertex[0].position;
