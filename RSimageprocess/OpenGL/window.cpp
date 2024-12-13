@@ -83,7 +83,7 @@ int Initialization(GLFWwindow *window) {
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init("#version 410");
     englishFont = io.Fonts->AddFontFromFileTTF("/Users/channingtong/Program/RSimageprocess/ImGUIopengl3/Arial.ttf", 18.0f, nullptr, io.Fonts->GetGlyphRangesDefault());
-    chineseFont = io.Fonts->AddFontFromFileTTF("/Users/channingtong/Program/RSimageprocess/ImGUIopengl3/Songti.ttc", 18.0f,nullptr,io.Fonts->GetGlyphRangesChineseSimplifiedCommon());
+    chineseFont = io.Fonts->AddFontFromFileTTF("/Users/channingtong/Program/RSimageprocess/ImGUIopengl3/Songti.ttc", 20.0f,nullptr,io.Fonts->GetGlyphRangesChineseSimplifiedCommon());
     io.Fonts->Build();
     return 0;
 }
@@ -95,9 +95,9 @@ void DrawBasic() {
     ImGui::NewFrame();
     ImGui::SetNextWindowPos(ImVec2(0, 0));
     ImGui::SetNextWindowSize(ImVec2(windowPara.SIDEBAR_WIDTH, windowPara.WINDOW_HEIGHT));
-    
     ImGui::Begin("Sidebar", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse);
     RenderLayerTree();
+    RenderWorkspace();
     ImGui::End();
     return;
 }
@@ -106,6 +106,62 @@ void RenderLayerTree(){
     ImGui::BeginChild("Layers",ImVec2(0,windowPara.WINDOW_HEIGHT / 3));
     LayerManager& layerManager = LayerManager::getLayers();
     layerManager.printLayerTree();
+    ImGui::EndChild();
+}
+void RenderWorkspace(){
+    WindowParas& windowPara = WindowParas::getInstance();
+    BufferRecorder& buffer = BufferRecorder::getBuffer();
+    ImGui::BeginChild("Workspace",ImVec2(0,windowPara.WINDOW_HEIGHT / 3));
+    ImGuiStyle& style = ImGui::GetStyle();
+    style.FramePadding = ImVec2(8.0f, 4.0f);
+    style.ItemSpacing = ImVec2(16.0f, 8.0f);
+    ImGui::PushFont(gui::chineseFont);
+    if (ImGui::Button("导入遥感影像")){
+        
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("导入ROI")){
+        
+    }
+    if (buffer.selectedLayer != nullptr){
+        const ImVec2 ButtonSize = ImVec2(windowPara.SIDEBAR_WIDTH * 3 / 7, 50);
+        if (buffer.selectedLayer->getType() == LayerType::raster){
+            std::string visbleButtonStr = "隐藏图层";
+            if (!buffer.selectedLayer->getVisble())
+                visbleButtonStr = "显示图层";
+            if (ImGui::Button(visbleButtonStr.c_str(),ButtonSize)){
+                
+            }
+            ImGui::SameLine();
+            if (ImGui::Button("导出影像",ButtonSize)){
+                
+            }
+            if (ImGui::Button("查看元信息",ButtonSize)){
+                
+            }
+            ImGui::SameLine();
+            if (ImGui::Button("统计波段信息",ButtonSize)){
+                
+            }
+            if (ImGui::Button("直方图均衡化",ButtonSize)){
+                
+            }
+            ImGui::SameLine();
+            if (ImGui::Button("对比度拉伸",ButtonSize)){
+                
+            }
+            if (ImGui::Button("频域滤波",ButtonSize)){
+                
+            }
+            ImGui::SameLine();
+            if (ImGui::Button("空间滤波",ButtonSize)){
+                
+            }
+        }
+    }
+    style.FramePadding = ImVec2(4.0f, 2.0f);
+    style.ItemSpacing = ImVec2(8.0f, 4.0f);
+    ImGui::PopFont();
     ImGui::EndChild();
 }
 }

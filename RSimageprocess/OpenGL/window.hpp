@@ -54,5 +54,6 @@ extern ImFont *englishFont,*chineseFont;
 int Initialization(GLFWwindow* window);
 void DrawBasic();
 void RenderLayerTree();
+void RenderWorkspace();
 }
 #endif /* window_hpp */
