@@ -301,6 +301,39 @@ void TextureManager::average(){
 void TextureManager::strech(){
     
 }
+void Image::manageBands() {
+    if (textureManager.pointIndex > 2){
+        deleteTexture();
+        generateTexture();
+        gui::toShowManageBand = false;
+        return;
+    }
+    constexpr std::string colormap[3] = {"red","green","blue"};
+    ImGui::OpenPopup("Manage Bands");
+    ImVec2 pos = ImGui::GetMainViewport()->GetCenter();
+    ImGui::SetNextWindowPos(pos);
+    if (ImGui::BeginPopup("Manage Bands")) {
+        std::string selectInfo = "Select the " + colormap[textureManager.pointIndex] + " band:";
+        ImGui::Text("%s", selectInfo.c_str());
+        int counter = 0;
+        std::vector<std::string> bandStrVec;
+        for (std::vector<Band>::const_reverse_iterator band = bands.rbegin(); band != bands.rend(); band++){
+            std::ostringstream nameOS;
+            nameOS<<"band"<<++counter<<std::setprecision(1)<<":"<<band->wavelength<<"mm";
+            bandStrVec.push_back(nameOS.str());
+        }
+        std::vector<const char*> bandCharVec;
+        for (std::vector<std::string>::const_iterator bandStr = bandStrVec.begin(); bandStr != bandStrVec.end(); bandStr++)
+            bandCharVec.push_back(bandStr->c_str());
+        int selectedItem = -1;
+        if (ImGui::ListBox("##loaded bands", &selectedItem, bandCharVec.data(), static_cast<int>(bandCharVec.size()), 7)){
+            textureManager.RGBindex[textureManager.pointIndex] = selectedItem;
+            ++textureManager.pointIndex;
+        }
+        ImGui::EndPopup();
+    }
+    textureManager.manage();
+}
 void Image::exportImage() const{
     
 }
@@ -330,7 +363,9 @@ void Image::draw() const{
     textureManager.draw();
 }
 void Image::generateTexture(){
-    std::shared_ptr<Spectum> rval = bands[textureManager.rind].value,gval = bands[textureManager.gind].value,bval = bands[textureManager.bind].value;
+    std::shared_ptr<Spectum> rval = bands[textureManager.RGBindex[0]].value;
+    std::shared_ptr<Spectum> gval = bands[textureManager.RGBindex[1]].value;
+    std::shared_ptr<Spectum> bval = bands[textureManager.RGBindex[2]].value;
     const int width = rval->width, height = rval->height, num = width * height;
     uint8_t *RGB = new unsigned char[num * 3];
     for (int i = 0; i < num; i++){

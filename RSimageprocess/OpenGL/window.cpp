@@ -151,8 +151,10 @@ void RenderWorkspace(){
             if (ImGui::Button("查看信息",ButtonSize))
                 toShowStatistic = true;
             ImGui::SameLine();
-            if (ImGui::Button("波段重组",ButtonSize))
+            if (ImGui::Button("波段重组",ButtonSize)){
                 toShowManageBand = true;
+                buffer.selectedLayer->ResetBandIndex();
+            }
             if (ImGui::Button("直方图均衡化",ButtonSize))
                 buffer.selectedLayer->averageBands();
             ImGui::SameLine();
@@ -181,7 +183,7 @@ void ImportImage(){
     if (ImGui::BeginPopup("Import Image")) {
         ImGui::Text("输入遥感集MTL文件");
         ImGui::InputText("##input", inputBuffer, sizeof(inputBuffer));
-        if (ImGui::Button("OK")) {
+        if (ImGui::Button("确认")) {
             pParser parser = std::make_shared<Landsat8BundleParser>(inputBuffer);
             parser->PrintInfo();
             LayerManager& layerManager = LayerManager::getLayers();
@@ -191,7 +193,7 @@ void ImportImage(){
             ImGui::CloseCurrentPopup();
         }
         ImGui::SameLine();
-        if (ImGui::Button("Cancel")) {
+        if (ImGui::Button("取消")) {
             inputBuffer[0] = '\0';
             toImportImage = false;
             ImGui::CloseCurrentPopup();

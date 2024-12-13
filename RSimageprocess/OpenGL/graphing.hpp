@@ -102,8 +102,12 @@ class TextureManager{
 using pTexture = std::shared_ptr<Texture>;
     pTexture texture;
 public:
-    TextureManager(pTexture texturePtr) : texture(texturePtr),rind(3),gind(2),bind(1){}
-    int rind, gind, bind;
+    int RGBindex[3],pointIndex;
+    TextureManager(pTexture texturePtr) : texture(texturePtr),pointIndex(3){
+        RGBindex[0] = 3; //red
+        RGBindex[1] = 2; //green
+        RGBindex[2] = 1; //blue
+    }
     void draw() const{
         if (texture != nullptr)
             texture->draw();
@@ -128,10 +132,12 @@ public:
     void draw() const override;
     const std::vector<Band>& getBands(){return bands;}
     void generateTexture();
+    void deleteTexture() {textureManager.deleteTexture();}
     void exportImage() const;
-    void manageBands() {textureManager.manage();}
+    void manageBands();
     void averageBands() {textureManager.average();}
     void strechBands() {textureManager.strech();}
+    void ResetIndex() {textureManager.pointIndex = 0;}
 };
 class ROI : public Primitive{
     glm::vec3 startPosition;

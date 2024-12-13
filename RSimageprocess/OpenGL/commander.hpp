@@ -61,6 +61,11 @@ public:
     void manageBands();
     void averageBands();
     void strechBands();
+    void ResetBandIndex(){
+        if (type != LayerType::raster)
+            return;
+        std::get<std::unique_ptr<Image>>(object)->ResetIndex();
+    }
 };
 class LayerManager{
     using pLayer = std::shared_ptr<Layer>;
