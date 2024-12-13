@@ -51,9 +51,14 @@ constexpr GLfloat borderDetectRange = 20.0f;
 constexpr GLfloat dragCameraSpeed = 6.0f;
 constexpr GLfloat doubleClickBias = 0.2f;
 extern ImFont *englishFont,*chineseFont;
+extern bool toImportImage,toShowStatistic,toShowManageBand,toImportROI;
 int Initialization(GLFWwindow* window);
 void DrawBasic();
+bool DrawPopup();
 void RenderLayerTree();
 void RenderWorkspace();
+void ImportImage();
+void ShowStatistic();
+void ManageBands();
 }
 #endif /* window_hpp */

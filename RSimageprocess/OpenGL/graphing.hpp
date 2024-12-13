@@ -98,22 +98,47 @@ typedef std::unique_ptr<Shader> pShader;
 extern std::map<std::string,pShader > ShaderBucket;
 void InitResource(GLFWwindow *window);
 
+class TextureManager{
+using pTexture = std::shared_ptr<Texture>;
+    pTexture texture;
+public:
+    int RGBindex[3],pointIndex;
+    TextureManager(pTexture texturePtr) : texture(texturePtr),pointIndex(3){
+        RGBindex[0] = 3; //red
+        RGBindex[1] = 2; //green
+        RGBindex[2] = 1; //blue
+    }
+    void draw() const{
+        if (texture != nullptr)
+            texture->draw();
+    }
+    void manage();
+    void average();
+    void strech();
+    void deleteTexture() {texture = nullptr;}
+    void createtexture(pTexture texturePtr) {texture = texturePtr;}
+};
 struct Band{
     std::shared_ptr<Spectum> value;
     std::string  wavelength;
 };
 class Image : public Primitive{
     std::vector<Band> bands;
-    std::shared_ptr<Texture> texture;
+    TextureManager textureManager;
 public:
     explicit Image(const std::vector<Vertex>& faceVertex):
-    Primitive(faceVertex,GL_LINE_LOOP,ShaderBucket["line"].get()),texture(nullptr){}
+    Primitive(faceVertex,GL_LINE_LOOP,ShaderBucket["line"].get()),textureManager(nullptr){}
     void LoadNewBand(std::string searchingPath,std::string wavelength);
-    Image(std::string resourchPath,const std::vector<Vertex>& faceVertex);
     void draw() const override;
     const std::vector<Band>& getBands(){return bands;}
-    void generateTexture(int rind = 3, int gind = 2, int bind = 1);
-    void generateTexture(int singleBand);
+    void generateTexture();
+    void deleteTexture() {textureManager.deleteTexture();}
+    void exportImage() const;
+    void manageBands();
+    void averageBands() {textureManager.average();}
+    void strechBands() {textureManager.strech();}
+    void ResetIndex() {textureManager.pointIndex = 0;}
+    std::string getIndicator(int index);
 };
 class ROI : public Primitive{
     glm::vec3 startPosition;
