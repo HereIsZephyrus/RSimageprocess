@@ -13,6 +13,7 @@
 #include <vector>
 #include <memory>
 #include <map>
+#include <ogr_spatialref.h>
 #include "OpenGL/graphing.hpp"
 using std::vector;
 vector<Vertex> getImageExtent(std::string);
@@ -35,6 +36,7 @@ public:
     std::unordered_map<int, std::string> TIFFpathParser;
     std::unordered_map<std::string, std::string> projectionParams;
     Range geographic,projection;
+    OGRSpatialReference sourceSRS, targetSRS;
 };
 class Landsat8BundleParser : public BundleParser{
     void readTIffPath() override;

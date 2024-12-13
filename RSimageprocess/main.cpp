@@ -77,12 +77,22 @@ void setTestDataset(){
     ROI test(test_points);
     LayerManager& layerManager = LayerManager::getLayers();
     Camera2D& camera = Camera2D::getView();
+    pParser parser = std::make_shared<Landsat8BundleParser>("/Users/channingtong/Document/rawTIF/LC08_L2SP_118039_20220315_20220322_02_T1/LC08_L2SP_118039_20220315_20220322_02_T1_MTL.txt");
+    parser->PrintInfo();
+    
     std::shared_ptr<Layer> testLayer1 = std::make_shared<Layer>("testLayer1",test_points);
     std::shared_ptr<Layer> testLayer2 = std::make_shared<Layer>("testLayer2",test_points_alter);
+    
+    std::unique_ptr<Image>& image = std::get<std::unique_ptr<Image>>(testLayer1->object);
+    for (std::unordered_map<int, std::string>::iterator rasterInfo = parser->TIFFpathParser.begin(); rasterInfo != parser->TIFFpathParser.end(); rasterInfo++){
+        std::string imagePath = parser->getBundlePath() + "/" + rasterInfo->second;
+        if (rasterInfo->first > 7)
+            continue;
+        image->LoadNewBand(imagePath,parser->getWaveLength(rasterInfo->first-1));
+    }
+    image->generateTexture();
     layerManager.addLayer(testLayer1);
     layerManager.addLayer(testLayer2);
     camera.setExtent(test.getExtent());
-    pParser parser = std::make_shared<Landsat8BundleParser>("/Users/channingtong/Document/rawTIF/LC08_L2SP_118039_20220315_20220322_02_T1/LC08_L2SP_118039_20220315_20220322_02_T1_MTL.txt");
-    parser->PrintInfo();
     layerManager.importlayer(parser);
 }

@@ -15,13 +15,16 @@
 #include <string>
 #include <map>
 #include <glm/glm.hpp>
+#include <opencv2/opencv.hpp>
 #include "camera.hpp"
 
 struct Spectum{
     unsigned short **rawData;
     unsigned char *showData;
     int width,height;
+    glm::vec2 validRange[4];
     Spectum(unsigned short* flatd,int w,int h);
+    Spectum(const cv::Mat& image);
     ~Spectum();
 };
 struct Vertex {
@@ -73,7 +76,7 @@ protected:
 };
 class Texture{
 public:
-    Texture(const std::vector<glm::vec3>& position,GLuint textureID);
+    Texture(const std::vector<glm::vec3>& position, const std::vector<glm::vec2>& texturePos, GLuint textureID);
     Texture(const Texture&) = delete;
     void operator=(const Texture&) = delete;
     ~Texture(){
@@ -109,7 +112,7 @@ public:
     Image(std::string resourchPath,const std::vector<Vertex>& faceVertex);
     void draw() const override;
     const std::vector<Band>& getBands(){return bands;}
-    void generateTexture(int rind = 2, int gind = 1, int bind = 0);
+    void generateTexture(int rind = 3, int gind = 2, int bind = 1);
     void generateTexture(int singleBand);
 };
 class ROI : public Primitive{

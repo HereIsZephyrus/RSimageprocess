@@ -41,7 +41,7 @@ enum class LayerType{
 };
 class LayerManager;
 class Layer{
-    std::variant<std::unique_ptr<Image>,std::unique_ptr<ROIcollection>> object;
+    //std::variant<std::unique_ptr<Image>,std::unique_ptr<ROIcollection>> object;
     std::string name;
     LayerType type;
     std::string getFileName(std::string resourcePath);
@@ -55,6 +55,7 @@ public:
     name(layerName),prev(nullptr),next(nullptr),type(LayerType::raster){
         object = std::make_unique<Image>(vertices);
     }
+    std::variant<std::unique_ptr<Image>,std::unique_ptr<ROIcollection>> object;
     void Draw();
     void BuildLayerStack();
     std::string getName() const{return name;}

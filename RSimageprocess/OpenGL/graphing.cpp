@@ -74,6 +74,12 @@ void Shader::linkProgram(){
 }
 
 Spectum::Spectum(unsigned short* flatd,int w,int h):width(w),height(h){
+    validRange[0].x  = width + 1; // left
+    validRange[1].x = 0; // right
+    validRange[2].x  = height + 1; // botton
+    validRange[3].x = 0; // top
+    if (width % 2) width--;
+    if (height%2)height--;
     rawData = new unsigned short*[height];
     showData = new unsigned char[width * height];
     for (int y = 0; y < height; y++){
@@ -81,11 +87,79 @@ Spectum::Spectum(unsigned short* flatd,int w,int h):width(w),height(h){
         for (int x = 0; x < width; x++){
             int loc = y * width + x;
             rawData[y][x] = flatd[loc];
-            if (flatd[loc] == 65534)
-                showData[loc] = 0; //nodata
-            else
-                showData[loc] = flatd[loc]/255;
+            showData[loc] = flatd[loc] * 255 / 65535;
+            if (rawData[y][x] == 0)
+                continue;
+            if (x < validRange[0].x){
+                validRange[0].x = x;
+                validRange[0].y = y;
+            }
+            if (x > validRange[1].x){
+                validRange[1].x = x;
+                validRange[1].y = y;
+            }
+            if (y < validRange[2].y){
+                validRange[2].x = x;
+                validRange[2].y = y;
+            }
+            if (y > validRange[3].y){
+                validRange[3].x = x;
+                validRange[3].y = y;
+            }
         }
+    }
+    for (int i = 0; i < 3; i++){
+        validRange[i].x /= width;
+        validRange[i].y /= height;
+    }
+}
+Spectum::Spectum(const cv::Mat& image){
+    //cv::Mat padded_image;
+    //cv::copyMakeBorder(image, padded_image, 0, 0, 0, 140, cv::BORDER_CONSTANT, cv::Scalar(0));
+    width = image.cols; height = image.rows;
+    //cv::imshow("raw image", image);
+    //cv::waitKey(0);
+    validRange[0].x  = width + 1; // left
+    validRange[1].y = 0; // top
+    validRange[2].x = 0; // right
+    validRange[3].y  = height + 1; // botton
+    if (width % 2) width--;
+    if (height%2)height--;
+    //cv::Mat newImage(height,width,CV_8U);
+    rawData = new unsigned short*[height];
+    showData = new unsigned char[width * height];
+    for (int y = 0; y < height; y++){
+        rawData[y] = new unsigned short[width];
+        for (int x = 0; x < width; x++){
+            int loc = y * width + x;
+            rawData[y][x] = image.at<ushort>(y,x);
+            showData[loc] = rawData[y][x] * 255 / 65535;
+            //newImage.at<uchar>(y,x) = showData[loc];
+            if (rawData[y][x] == 0)
+                continue;
+            if (x < validRange[0].x){
+                validRange[0].x = x;
+                validRange[0].y = y;
+            }
+            if (y > validRange[1].y){
+                validRange[1].x = x;
+                validRange[1].y = y;
+            }
+            if (x > validRange[2].x){
+                validRange[2].x = x;
+                validRange[2].y = y;
+            }
+            if (y < validRange[3].y){
+                validRange[3].x = x;
+                validRange[3].y = y;
+            }
+        }
+    }
+    //cv::imshow("new image", newImage);
+    //cv::waitKey(0);
+    for (int i = 0; i < 4; i++){
+        validRange[i].x /= width;
+        validRange[i].y /= height;
     }
 }
 Spectum::~Spectum(){
@@ -177,14 +251,9 @@ void Primitive::update(){
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindVertexArray(0);
 }
-Texture::Texture(const std::vector<glm::vec3>& position,GLuint textureID):textureID(textureID),shape(GL_TRIANGLE_FAN),shader(ShaderBucket["image"].get()){
+Texture::Texture(const std::vector<glm::vec3>& position, const std::vector<glm::vec2>& location, GLuint textureID):
+textureID(textureID),shape(GL_TRIANGLE_FAN),shader(ShaderBucket["image"].get()){
     vertexNum = position.size();
-    const std::vector<glm::vec2> location = {
-        glm::vec2(1.0,1.0), // downleft
-        glm::vec2(1.0,0.0), // upleft
-        glm::vec2(0.0,0.0), // upright
-        glm::vec2(0.0,1.0), // downright
-    };
     vertices = new GLfloat[vertexNum * stride];
     for (size_t i = 0; i < vertexNum; i++){
         vertices[i * stride] = position[i].x;        vertices[i * stride + 1] = position[i].y;        vertices[i * stride + 2] = position[i].z;
@@ -212,6 +281,7 @@ void Texture::draw() const {
     }
     else
         shader ->use();
+    glActiveTexture(GL_TEXTURE0);
     GLuint projectionLoc = glGetUniformLocation(shader->program, "projection");
     GLuint viewLoc = glGetUniformLocation(shader->program, "view");
     GLuint modelLoc = glGetUniformLocation(shader->program, "model");
@@ -222,7 +292,7 @@ void Texture::draw() const {
     glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(projection));
     glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
     glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-    
+    glUniform1i(glGetUniformLocation(shader->program, "textureSampler"), 0);
     GLuint thicknessLoc = glGetUniformLocation(shader->program, "thickness");
     glUniform1f(thicknessLoc,0.02f);
     glBindVertexArray(VAO);
@@ -234,6 +304,10 @@ Image::Image(std::string resourchPath,const std::vector<Vertex>& faceVertex):Pri
     
 }
 void Image::LoadNewBand(std::string searchingPath,std::string spectum){
+    cv::Mat image = cv::imread(searchingPath.c_str(),cv::IMREAD_UNCHANGED);
+    std::shared_ptr<Spectum> mat = std::make_shared<Spectum>(image);
+    bands.push_back(Band(mat,spectum));
+    /*
     GDALDataset *dataset = (GDALDataset *) GDALOpen(searchingPath.c_str(), GA_ReadOnly);
     if (dataset == nullptr) {
         std::cerr << "Error: Could not open the file." << std::endl;
@@ -247,6 +321,7 @@ void Image::LoadNewBand(std::string searchingPath,std::string spectum){
     bands.push_back(Band(mat,spectum));
     GDALClose(dataset);
     delete[] data;
+     */
 }
 
 void Image::draw() const{
@@ -257,33 +332,30 @@ void Image::draw() const{
 void Image::generateTexture(int rind, int gind, int bind){
     std::shared_ptr<Spectum> rval = bands[rind].value,gval = bands[gind].value,bval = bands[bind].value;
     const int width = rval->width, height = rval->height, num = width * height;
-    /*
-    std::vector<unsigned char> RGB(width * height * 3);
-    std::copy(rval->showData,rval->showData + width * height,RGB.begin());
-    std::copy(gval->showData,gval->showData + width * height,RGB.begin() + width * height * 1);
-    std::copy(bval->showData,bval->showData + width * height,RGB.begin() + width * height * 2);
-     */
-    unsigned char *RGB = new unsigned char[num * 3];
+    uint8_t *RGB = new unsigned char[num * 3];
     for (int i = 0; i < num; i++){
-        RGB[3 * i] = rval->showData[i];
+        RGB[3 * i] = bval->showData[i];
         RGB[3 * i + 1] = gval->showData[i];
-        RGB[3 * i + 2] = bval->showData[i];
+        RGB[3 * i + 2] = rval->showData[i];
     }
-    unsigned int textureID;
+    GLuint textureID;
     glGenTextures(1, &textureID);
     glBindTexture(GL_TEXTURE_2D, textureID);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    //glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, RGB.data());
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, RGB);
     glGenerateMipmap(GL_TEXTURE_2D);
     std::vector<glm::vec3> position;
-    for (int index = 0; index < vertexNum; index++)
+    std::vector<glm::vec2> texturePos;
+    for (int index = 0; index < vertexNum ; index++){
         position.push_back(glm::vec3(vertices[index * stride],vertices[index * stride + 1],vertices[index * stride + 2]));
-    texture = std::make_shared<Texture>(position,textureID);
+        texturePos.push_back(rval->validRange[index]);
+    }
+    texture = std::make_shared<Texture>(position,texturePos,textureID);
     delete[] RGB;
+    glBindTexture(GL_TEXTURE_2D, 0);
 }
 void Image::generateTexture(int singleBand){
     std::vector<unsigned char> gray;
@@ -300,9 +372,12 @@ void Image::generateTexture(int singleBand){
     glTexImage2D(GL_TEXTURE_2D, 0, GL_R8, width, height, 0, GL_R8, GL_UNSIGNED_BYTE, gray.data());
     glGenerateMipmap(GL_TEXTURE_2D);
     std::vector<glm::vec3> position;
-    for (int index = 0; index < vertexNum; index++)
+    std::vector<glm::vec2> texturePos;
+    for (int index = 0; index < vertexNum ; index++){
         position.push_back(glm::vec3(vertices[index * stride],vertices[index * stride + 1],vertices[index * stride + 2]));
-    texture = std::make_shared<Texture>(position,textureID);
+        texturePos.push_back(value->validRange[index]);
+    }
+    texture = std::make_shared<Texture>(position,texturePos,textureID);
 }
 ROI::ROI(const std::vector<Vertex>& inputVertex):Primitive(inputVertex,GL_LINE_LOOP,ShaderBucket["line"].get()){
     startPosition = inputVertex[0].position;
