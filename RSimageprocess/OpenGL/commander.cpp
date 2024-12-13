@@ -44,19 +44,6 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
 std::string Layer::getFileName(std::string resourcePath){
     return resourcePath;
 }
-Layer::Layer(std::string resourcePath, LayerType layerType)
-:type(layerType),prev(nullptr),next(nullptr)
-{
-    name = getFileName(resourcePath);
-    switch (type) {
-        case LayerType::raster:
-            object = std::make_unique<Image>(resourcePath,getImageExtent(resourcePath));
-            break;
-        case LayerType::vector:
-            object = std::make_unique<ROIcollection>(resourcePath);
-            break;
-    }
-}
 void Layer::Draw(){
     using pImage = std::unique_ptr<Image>;
     using pROI = std::unique_ptr<ROIcollection>;
@@ -72,9 +59,9 @@ void Layer::BuildLayerStack(){
     if (type == LayerType::raster){
         const std::vector<Band>& bands = std::get<std::unique_ptr<Image>>(object)->getBands();
         int counter = 0;
-        for (std::vector<Band>::const_iterator band = bands.begin(); band != bands.end(); band++){
+        for (std::vector<Band>::const_reverse_iterator band = bands.rbegin(); band != bands.rend(); band++){
             std::ostringstream nameOS;
-            nameOS<<"band"<<counter<<std::setprecision(1)<<":"<<band->spectum<<"mm";
+            nameOS<<"band"<<++counter<<std::setprecision(1)<<":"<<band->wavelength<<"mm";
             if (ImGui::TreeNodeEx(nameOS.str().c_str(), propertyFlag)){
                 ImGui::TreePop();
             }
@@ -93,15 +80,24 @@ void LayerManager::addLayer(pLayer newLayer) {
         tail = newLayer;
     }
 }
-void LayerManager::addLayer(std::string resourcePath, LayerType layerType) {
-    pLayer newLayer = std::make_shared<Layer>(resourcePath,layerType);
-    if (!head) {
-        head = tail = newLayer;
-    } else {
-        tail->next = newLayer;
-        newLayer->prev = tail;
-        tail = newLayer;
+void LayerManager::importlayer(std::shared_ptr<BundleParser> parser){
+    std::vector<Vertex> faceVertices = {
+        {glm::vec3(parser->geographic.downleft.x,parser->geographic.downleft.y,0.0),glm::vec3(1.0,1.0,1.0)},
+        {glm::vec3(parser->geographic.downright.x,parser->geographic.downright.y,0.0),glm::vec3(1.0,1.0,1.0)},
+        {glm::vec3(parser->geographic.upright.x,parser->geographic.upright.y,0.0),glm::vec3(1.0,1.0,1.0)},
+        {glm::vec3(parser->geographic.upleft.x,parser->geographic.upleft.y,0.0),glm::vec3(1.0,1.0,1.0)},
+    };
+    pLayer newLayer = std::make_shared<Layer>(parser->getFileIdentifer(),faceVertices);
+    std::unique_ptr<Image>& image = std::get<std::unique_ptr<Image>>(newLayer->object);
+    for (std::unordered_map<int, std::string>::iterator rasterInfo = parser->TIFFpathParser.begin(); rasterInfo != parser->TIFFpathParser.end(); rasterInfo++){
+        std::string imagePath = parser->getBundlePath() + "/" + rasterInfo->second;
+        if (rasterInfo->first > 7)
+            continue;
+        image->LoadNewBand(imagePath,parser->getWaveLength(rasterInfo->first-1));
     }
+    image->generateTexture();
+    addLayer(newLayer);
+    std::cout<<"imported "<<parser->getFileIdentifer()<<std::endl;
 }
 void LayerManager::removeLayer(pLayer deleteLayer) {
     if (deleteLayer->prev != nullptr)
@@ -155,16 +151,21 @@ void LayerManager::printLayerTree(){
     //ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.5f, 0.7f, 1.0f, 1.0f));
     //ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.3f, 0.5f, 0.7f, 1.0f));
     while (current != nullptr){
-        if (ImGui::TreeNodeEx(current->getName().c_str(), layerFlag)){
+        bool isOpen = ImGui::TreeNodeEx(current->getName().c_str(), layerFlag);
+        ImGui::SameLine();
+        if (ImGui::ArrowButton(std::string("##UpArrow"+ current->getName()).c_str(), ImGuiDir_Up)){
+            moveLayerUp(current);
+        }
+        ImGui::SameLine();
+        if (ImGui::ArrowButton(std::string("##DownArrow" + current->getName()).c_str(), ImGuiDir_Down)){
+            moveLayerDown(current);
+        }
+        ImGui::SameLine();
+        if (ImGui::ArrowButton(std::string("##RightArrow" + current->getName()).c_str(), ImGuiDir_Right)){
+            Camera2D::getView().setExtent(current->getExtent());
+        }
+        if (isOpen){
             if (ImGui::IsItemClicked()){}
-            ImGui::SameLine();
-            if (ImGui::ArrowButton(std::string("##UpArrow"+ current->getName()).c_str(), ImGuiDir_Up)){
-                moveLayerUp(current);
-            }
-            ImGui::SameLine();
-            if (ImGui::ArrowButton(std::string("##DownArrow" + current->getName()).c_str(), ImGuiDir_Down)){
-                moveLayerDown(current);
-            }
             current->BuildLayerStack();
             ImGui::TreePop();
         }

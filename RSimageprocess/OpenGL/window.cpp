@@ -67,6 +67,9 @@ int initOpenGL(GLFWwindow *&window,std::string windowName) {
     glfwSetWindowRefreshCallback(window, windowRefreshCallback);
     std::cout<<version<<std::endl;
     HAS_INIT_OPENGL_CONTEXT = true;
+    GLint maxTextureSize;
+    glGetIntegerv(GL_MAX_TEXTURE_SIZE, &maxTextureSize);
+    std::cout << "Maximum texture size: " << maxTextureSize << std::endl;
     return 0;
 }
 namespace gui {

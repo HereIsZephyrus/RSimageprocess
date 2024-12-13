@@ -30,8 +30,8 @@ public:
     WindowParas(const WindowParas&) = delete;
     void operator=(const WindowParas&) = delete;
     GLFWwindow * window;
-    const GLint WINDOW_WIDTH = 1280;
-    const GLint WINDOW_HEIGHT = 720;
+    const GLint WINDOW_WIDTH = 1150;
+    const GLint WINDOW_HEIGHT = 900;
     const GLint SIDEBAR_WIDTH = 250;
     GLint SCREEN_WIDTH,SCREEN_HEIGHT,SCREEN_LEFT,SCREEN_BOTTON;
     GLfloat xScale,yScale;

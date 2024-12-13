@@ -21,6 +21,7 @@
 #include "imgui_impl_opengl3.h"
 #include "graphing.hpp"
 #include "camera.hpp"
+#include "../interface.hpp"
 class BufferRecorder{
 public:
     static BufferRecorder& getBuffer(){
@@ -38,22 +39,33 @@ enum class LayerType{
     raster,
     vector
 };
+class LayerManager;
 class Layer{
-    std::variant<std::unique_ptr<Image>,std::unique_ptr<ROIcollection>> object;
+    //std::variant<std::unique_ptr<Image>,std::unique_ptr<ROIcollection>> object;
     std::string name;
     LayerType type;
     std::string getFileName(std::string resourcePath);
 public:
-    Layer(std::string resourcePath, LayerType layerType);
+    friend LayerManager;
+    explicit Layer(std::string layerName,std::string resourcePath):
+    name(layerName),prev(nullptr),next(nullptr),type(LayerType::vector){
+        object = std::make_unique<ROIcollection>(resourcePath);
+    }
     Layer(std::string layerName, const std::vector<Vertex>& vertices):
-    name(layerName),prev(nullptr),next(nullptr)//deprecated, just for test
-    {
+    name(layerName),prev(nullptr),next(nullptr),type(LayerType::raster){
         object = std::make_unique<Image>(vertices);
     }
+    std::variant<std::unique_ptr<Image>,std::unique_ptr<ROIcollection>> object;
     void Draw();
     void BuildLayerStack();
     std::string getName() const{return name;}
     std::shared_ptr<Layer> prev,next;
+    Extent getExtent() const{
+        if (type == LayerType::raster)
+            return std::get<std::unique_ptr<Image>>(object)->getExtent();
+        else
+            return std::get<std::unique_ptr<ROIcollection>>(object)->getExtent();
+    }
 };
 class LayerManager{
     using pLayer = std::shared_ptr<Layer>;
@@ -75,7 +87,7 @@ public:
         }
     }
     void addLayer(pLayer newLayer);
-    void addLayer(std::string resourcePath, LayerType layerType);
+    void importlayer(std::shared_ptr<BundleParser> parser);
     void removeLayer(pLayer deleteLayer);
     void moveLayerUp(pLayer swapLayer);
     void moveLayerDown(pLayer swapLayer);
