@@ -33,6 +33,7 @@ class Layer{
     LayerType type;
     bool visble;
     std::string getFileName(std::string resourcePath);
+    std::string getIndicator(int index);
 public:
     friend LayerManager;
     Layer(std::string layerName,std::string resourcePath):
@@ -40,6 +41,7 @@ public:
         object = std::make_unique<ROIcollection>(resourcePath);
     }
     Layer(std::string layerName, const std::vector<Vertex>& vertices):
+    
     name(layerName),prev(nullptr),next(nullptr),type(LayerType::raster),visble(true){
         object = std::make_unique<Image>(vertices);
     }

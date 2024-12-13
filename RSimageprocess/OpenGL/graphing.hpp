@@ -138,6 +138,7 @@ public:
     void averageBands() {textureManager.average();}
     void strechBands() {textureManager.strech();}
     void ResetIndex() {textureManager.pointIndex = 0;}
+    std::string getIndicator(int index);
 };
 class ROI : public Primitive{
     glm::vec3 startPosition;

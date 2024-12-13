@@ -55,6 +55,13 @@ void Layer::Draw(){
         std::get<pROI>(object)->draw();
     }
 }
+std::string Layer::getIndicator(int index){
+    std::string indicator = "";
+    if (type != LayerType::raster)
+        return indicator;
+    indicator = std::get<std::unique_ptr<Image>>(object)->getIndicator(index);
+    return indicator;
+}
 bool Layer::BuildLayerStack(){
     const ImGuiTreeNodeFlags propertyFlag = ImGuiTreeNodeFlags_Leaf;
     bool clicked = false;
@@ -63,7 +70,8 @@ bool Layer::BuildLayerStack(){
         int counter = 0;
         for (std::vector<Band>::const_reverse_iterator band = bands.rbegin(); band != bands.rend(); band++){
             std::ostringstream nameOS;
-            nameOS<<"band"<<++counter<<std::setprecision(1)<<":"<<band->wavelength<<"mm";
+            std::string bandIndicator = getIndicator(counter);
+            nameOS<<"band"<<++counter<<std::setprecision(1)<<":"<<band->wavelength<<"mm"<<bandIndicator;
             if (ImGui::TreeNodeEx(nameOS.str().c_str(), propertyFlag)){
                 ImGui::TreePop();
                 if (ImGui::IsItemClicked())

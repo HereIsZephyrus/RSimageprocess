@@ -337,6 +337,13 @@ void Image::manageBands() {
 void Image::exportImage() const{
     
 }
+std::string Image::getIndicator(int index){
+    std::string indicator = "";
+    if (textureManager.RGBindex[0] == index)    return "(R)";
+    if (textureManager.RGBindex[1] == index)    return "(G)";
+    if (textureManager.RGBindex[2] == index)    return "(B)";
+    return indicator;
+}
 void Image::LoadNewBand(std::string searchingPath,std::string spectum){
     cv::Mat image = cv::imread(searchingPath.c_str(),cv::IMREAD_UNCHANGED);
     std::shared_ptr<Spectum> mat = std::make_shared<Spectum>(image);
