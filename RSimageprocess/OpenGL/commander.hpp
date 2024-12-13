@@ -22,19 +22,6 @@
 #include "graphing.hpp"
 #include "camera.hpp"
 #include "../interface.hpp"
-class BufferRecorder{
-public:
-    static BufferRecorder& getBuffer(){
-        static BufferRecorder instance;
-        return instance;
-    }
-    BufferRecorder(const BufferRecorder&) = delete;
-    void operator = (const BufferRecorder&) = delete;
-    GLboolean keyRecord[GLFW_KEY_LAST+1],pressLeft,pressRight,pressCtrl,pressShift,pressAlt,doubleCliked;
-    void initIO(GLFWwindow* window);
-private:
-    BufferRecorder(){}
-};
 enum class LayerType{
     raster,
     vector
@@ -44,20 +31,21 @@ class Layer{
     //std::variant<std::unique_ptr<Image>,std::unique_ptr<ROIcollection>> object;
     std::string name;
     LayerType type;
+    bool visble;
     std::string getFileName(std::string resourcePath);
 public:
     friend LayerManager;
-    explicit Layer(std::string layerName,std::string resourcePath):
-    name(layerName),prev(nullptr),next(nullptr),type(LayerType::vector){
+    Layer(std::string layerName,std::string resourcePath):
+    name(layerName),prev(nullptr),next(nullptr),type(LayerType::vector),visble(true){
         object = std::make_unique<ROIcollection>(resourcePath);
     }
     Layer(std::string layerName, const std::vector<Vertex>& vertices):
-    name(layerName),prev(nullptr),next(nullptr),type(LayerType::raster){
+    name(layerName),prev(nullptr),next(nullptr),type(LayerType::raster),visble(true){
         object = std::make_unique<Image>(vertices);
     }
     std::variant<std::unique_ptr<Image>,std::unique_ptr<ROIcollection>> object;
     void Draw();
-    void BuildLayerStack();
+    bool BuildLayerStack();
     std::string getName() const{return name;}
     std::shared_ptr<Layer> prev,next;
     Extent getExtent() const{
@@ -66,6 +54,8 @@ public:
         else
             return std::get<std::unique_ptr<ROIcollection>>(object)->getExtent();
     }
+    LayerType getType() const {return type;}
+    bool getVisble() const {return visble;}
 };
 class LayerManager{
     using pLayer = std::shared_ptr<Layer>;
@@ -93,6 +83,20 @@ public:
     void moveLayerDown(pLayer swapLayer);
     void printLayerTree();
     void Draw();
+};
+class BufferRecorder{
+public:
+    static BufferRecorder& getBuffer(){
+        static BufferRecorder instance;
+        return instance;
+    }
+    BufferRecorder(const BufferRecorder&) = delete;
+    void operator = (const BufferRecorder&) = delete;
+    GLboolean keyRecord[GLFW_KEY_LAST+1],pressLeft,pressRight,pressCtrl,pressShift,pressAlt,doubleCliked;
+    std::shared_ptr<Layer> selectedLayer;
+    void initIO(GLFWwindow* window);
+private:
+    BufferRecorder(){}
 };
 void scrollCallback(GLFWwindow* window, double xoffset, double yoffset);
 void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods);

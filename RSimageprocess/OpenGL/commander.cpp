@@ -16,6 +16,7 @@ void BufferRecorder::initIO(GLFWwindow* window){
     pressShift = GL_FALSE;
     pressCtrl = GL_FALSE;
     doubleCliked = GL_FALSE;
+    selectedLayer = nullptr;
     glfwSetKeyCallback(window, keyCallback);
     glfwSetScrollCallback(window, scrollCallback);
 }
@@ -54,8 +55,9 @@ void Layer::Draw(){
         std::get<pROI>(object)->draw();
     }
 }
-void Layer::BuildLayerStack(){
+bool Layer::BuildLayerStack(){
     const ImGuiTreeNodeFlags propertyFlag = ImGuiTreeNodeFlags_Leaf;
+    bool clicked = false;
     if (type == LayerType::raster){
         const std::vector<Band>& bands = std::get<std::unique_ptr<Image>>(object)->getBands();
         int counter = 0;
@@ -64,12 +66,15 @@ void Layer::BuildLayerStack(){
             nameOS<<"band"<<++counter<<std::setprecision(1)<<":"<<band->wavelength<<"mm";
             if (ImGui::TreeNodeEx(nameOS.str().c_str(), propertyFlag)){
                 ImGui::TreePop();
+                if (ImGui::IsItemClicked())
+                    clicked = true;
             }
         }
     }
     if (type == LayerType::vector){
         
     }
+    return clicked;
 }
 void LayerManager::addLayer(pLayer newLayer) {
     if (head == nullptr) {
@@ -108,6 +113,8 @@ void LayerManager::removeLayer(pLayer deleteLayer) {
         deleteLayer->next->prev = deleteLayer->prev;
     else
         tail = deleteLayer->prev;
+    if (BufferRecorder::getBuffer().selectedLayer == deleteLayer)
+        BufferRecorder::getBuffer().selectedLayer = nullptr;
     deleteLayer = nullptr;
 }
 void LayerManager::moveLayerUp(pLayer swapLayer) {
@@ -147,36 +154,40 @@ void LayerManager::moveLayerDown(pLayer swapLayer) {
 void LayerManager::printLayerTree(){
     pLayer current = head;
     const ImGuiTreeNodeFlags layerFlag = ImGuiTreeNodeFlags_DefaultOpen;
-    //ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.4f, 0.6f, 0.8f, 1.0f));
-    //ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.5f, 0.7f, 1.0f, 1.0f));
-    //ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.3f, 0.5f, 0.7f, 1.0f));
     while (current != nullptr){
         bool isOpen = ImGui::TreeNodeEx(current->getName().c_str(), layerFlag);
+        if (ImGui::IsItemClicked())
+            BufferRecorder::getBuffer().selectedLayer = current;
         ImGui::SameLine();
-        if (ImGui::ArrowButton(std::string("##UpArrow"+ current->getName()).c_str(), ImGuiDir_Up)){
+        if (ImGui::ArrowButton(std::string("##UpArrow"+ current->getName()).c_str(), ImGuiDir_Up))
             moveLayerUp(current);
-        }
         ImGui::SameLine();
-        if (ImGui::ArrowButton(std::string("##DownArrow" + current->getName()).c_str(), ImGuiDir_Down)){
+        if (ImGui::ArrowButton(std::string("##DownArrow" + current->getName()).c_str(), ImGuiDir_Down))
             moveLayerDown(current);
-        }
         ImGui::SameLine();
-        if (ImGui::ArrowButton(std::string("##RightArrow" + current->getName()).c_str(), ImGuiDir_Right)){
+        if (ImGui::ArrowButton(std::string("##RightArrow" + current->getName()).c_str(), ImGuiDir_Right))
             Camera2D::getView().setExtent(current->getExtent());
-        }
+        ImGui::SameLine();
+        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(1.0f, 0.0f, 0.0f, 1.0f));
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(1.0f, 0.5f, 0.5f, 1.0f));
+        ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(1.0f, 0.2f, 0.2f, 1.0f));
+        if (ImGui::Button(std::string("Del " + current->getName()).c_str()))
+            removeLayer(current);
+        ImGui::PopStyleColor(3);
         if (isOpen){
             if (ImGui::IsItemClicked()){}
-            current->BuildLayerStack();
+            if (current->BuildLayerStack())
+                BufferRecorder::getBuffer().selectedLayer = current;
             ImGui::TreePop();
         }
         current = current->next;
     }
-    //ImGui::PopStyleColor(3);
 }
 void LayerManager::Draw(){
     pLayer current = tail;
     while (current != nullptr){
-        current->Draw();
+        if (current->getVisble())
+            current->Draw();
         current = current->prev;
     }
 }
