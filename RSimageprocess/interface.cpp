@@ -6,6 +6,9 @@
 //
 
 #include "interface.hpp"
+#include "imgui.h"
+#include "imgui_impl_glfw.h"
+#include "imgui_impl_opengl3.h"
 using std::vector;
 vector<Vertex> getImageExtent(std::string){
     vector<Vertex> extent;
@@ -41,6 +44,18 @@ void BundleParser::PrintInfo(){
     std::cout<<"Upper Right:("<<projection.upright.x<<','<<projection.upright.y<<")"<<std::endl;
     std::cout<<"Lower Left:("<<projection.downleft.x<<','<<projection.downleft.y<<")"<<std::endl;
     std::cout<<"Lower Right:("<<projection.downright.x<<','<<projection.downright.y<<")"<<std::endl;
+}
+void BundleParser::ShowInfo(){
+    ImGui::Text("%s", std::string("像素尺寸:" + projectionParams["GRID_CELL_SIZE_REFLECTIVE"] + "m").c_str());
+    ImGui::SameLine();
+    ImGui::Text("%s", std::string("地理坐标系:" + projectionParams["DATUM"]).c_str());
+    ImGui::Text("地理坐标:");
+    ImGui::Text("%s", std::string("左上:(" + std::to_string(geographic.upleft.x) + "," + std::to_string(geographic.upleft.y) + ")").c_str());
+    ImGui::SameLine();
+    ImGui::Text("%s", std::string("右上:(" + std::to_string(geographic.upright.x) + "," + std::to_string(geographic.upright.y) + ")").c_str());
+    ImGui::Text("%s", std::string("左下:(" + std::to_string(geographic.downleft.x) + "," + std::to_string(geographic.downleft.y) + ")").c_str());
+    ImGui::SameLine();
+    ImGui::Text("%s", std::string("右下:(" + std::to_string(geographic.downright.x) + "," + std::to_string(geographic.downright.y) + ")").c_str());
 }
 void Landsat8BundleParser::readTIffPath(){
     std::ifstream mtlFile(mtlFilePath);

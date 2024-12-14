@@ -9,22 +9,38 @@
 #define graphing_hpp
 
 #define GLEW_STATIC
+#define SPECT_VALUE_RANGE 65536
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 #include <cstring>
 #include <string>
 #include <map>
+#include <array>
 #include <glm/glm.hpp>
 #include <opencv2/opencv.hpp>
 #include "camera.hpp"
 
+enum class StrechLevel{
+    noStrech,
+    minmaxStrech,
+    percent1Strech,
+    percent2Strech,
+};
+typedef std::pair<unsigned short,unsigned short> SpectumRange;
 struct Spectum{
     unsigned short **rawData;
-    unsigned char *showData;
-    int width,height;
+    unsigned short maxVal,minVal;
+    int width,height,totalPixel;
+    double mean;
     glm::vec2 validRange[4];
-    Spectum(unsigned short* flatd,int w,int h);
+    Spectum(unsigned short* flatd,int w,int h); //deprecated at this time
     Spectum(const cv::Mat& image);
+    SpectumRange strechRange;
+    std::array<float,SPECT_VALUE_RANGE> CDF,hist;
+    float HistHeight;
+    unsigned short average(int y,int x);
+    unsigned short strech(int y,int x);
+    SpectumRange setStrech(StrechLevel level);
     ~Spectum();
 };
 struct Vertex {
@@ -101,9 +117,10 @@ void InitResource(GLFWwindow *window);
 class TextureManager{
 using pTexture = std::shared_ptr<Texture>;
     pTexture texture;
+    bool toAverage;
 public:
     int RGBindex[3],pointIndex;
-    TextureManager(pTexture texturePtr) : texture(texturePtr),pointIndex(3){
+    TextureManager(pTexture texturePtr) : texture(texturePtr),pointIndex(3),toAverage(false){
         RGBindex[0] = 3; //red
         RGBindex[1] = 2; //green
         RGBindex[2] = 1; //blue
@@ -112,11 +129,12 @@ public:
         if (texture != nullptr)
             texture->draw();
     }
-    void manage();
-    void average();
-    void strech();
     void deleteTexture() {texture = nullptr;}
     void createtexture(pTexture texturePtr) {texture = texturePtr;}
+    void processBand(unsigned short* RGB,std::shared_ptr<Spectum> band, int bias);
+    void setToAverage(bool status) {toAverage = status;}
+    bool getToAverage() const{return toAverage;}
+    std::string getStatus();
 };
 struct Band{
     std::shared_ptr<Spectum> value;
@@ -125,20 +143,33 @@ struct Band{
 class Image : public Primitive{
     std::vector<Band> bands;
     TextureManager textureManager;
+    double **correlation;
+    void calcBandCoefficent();
+    double calcCoefficent(size_t bandind1,size_t bandind2);
 public:
     explicit Image(const std::vector<Vertex>& faceVertex):
-    Primitive(faceVertex,GL_LINE_LOOP,ShaderBucket["line"].get()),textureManager(nullptr){}
+    Primitive(faceVertex,GL_LINE_LOOP,ShaderBucket["line"].get()),textureManager(nullptr),correlation(nullptr){}
+    ~Image(){
+        if (correlation != nullptr){
+            for (size_t i = 0; i < bands.size(); i++)
+                delete[] correlation[i];
+            delete[] correlation;
+        }
+    }
     void LoadNewBand(std::string searchingPath,std::string wavelength);
     void draw() const override;
     const std::vector<Band>& getBands(){return bands;}
     void generateTexture();
     void deleteTexture() {textureManager.deleteTexture();}
-    void exportImage() const;
+    void exportImage(std::string filePath);
     void manageBands();
-    void averageBands() {textureManager.average();}
-    void strechBands() {textureManager.strech();}
-    void ResetIndex() {textureManager.pointIndex = 0;}
-    std::string getIndicator(int index);
+    void averageBands();
+    void strechBands(StrechLevel level,bool useGlobalRange);
+    void resetIndex() {textureManager.pointIndex = 0;}
+    void showBandInfo(int bandIndex);
+    void showBandCoefficient();
+    std::string getTextureStatus(){return textureManager.getStatus();}
+    std::string getIndicator(int bandindex);
 };
 class ROI : public Primitive{
     glm::vec3 startPosition;

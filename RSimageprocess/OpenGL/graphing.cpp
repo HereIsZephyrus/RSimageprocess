@@ -81,15 +81,22 @@ Spectum::Spectum(unsigned short* flatd,int w,int h):width(w),height(h){
     if (width % 2) width--;
     if (height%2)height--;
     rawData = new unsigned short*[height];
-    showData = new unsigned char[width * height];
+    std::array<int, SPECT_VALUE_RANGE> counting;
+    counting = {0};
+    CDF = {0.0f};
+    minVal = SPECT_VALUE_RANGE - 1;
+    maxVal = 0;
+    double sum = 0;
     for (int y = 0; y < height; y++){
         rawData[y] = new unsigned short[width];
         for (int x = 0; x < width; x++){
             int loc = y * width + x;
             rawData[y][x] = flatd[loc];
-            showData[loc] = flatd[loc] * 255 / 65535;
+            ++counting[rawData[y][x]];
             if (rawData[y][x] == 0)
                 continue;
+            if (minVal > rawData[y][x]) minVal = rawData[y][x];
+            if (minVal < rawData[y][x]) maxVal = rawData[y][x];
             if (x < validRange[0].x){
                 validRange[0].x = x;
                 validRange[0].y = y;
@@ -108,6 +115,17 @@ Spectum::Spectum(unsigned short* flatd,int w,int h):width(w),height(h){
             }
         }
     }
+    totalPixel = width * height - counting[0];
+    mean = sum / totalPixel;
+    CDF[0] = counting[0];
+    HistHeight = 0;
+    for (int val = 1; val < SPECT_VALUE_RANGE; val++){
+        hist[val] = static_cast<float>(counting[val]) / totalPixel;
+        if (hist[val] > HistHeight) HistHeight = hist[val];
+        counting[val] = counting[val-1] + counting[val];
+        CDF[val] = static_cast<double>(counting[val]) / totalPixel;
+    }
+    strechRange.first = 0; strechRange.second = SPECT_VALUE_RANGE - 1;
     for (int i = 0; i < 3; i++){
         validRange[i].x /= width;
         validRange[i].y /= height;
@@ -122,15 +140,22 @@ Spectum::Spectum(const cv::Mat& image){
     if (width % 2) width--;
     if (height%2)height--;
     rawData = new unsigned short*[height];
-    showData = new unsigned char[width * height];
+    std::array<int, SPECT_VALUE_RANGE> counting;
+    counting = {0};
+    CDF = {0.0f};
+    minVal = SPECT_VALUE_RANGE - 1;
+    maxVal = 0;
+    double sum = 0;
     for (int y = 0; y < height; y++){
         rawData[y] = new unsigned short[width];
         for (int x = 0; x < width; x++){
-            int loc = y * width + x;
             rawData[y][x] = image.at<ushort>(y,x);
-            showData[loc] = rawData[y][x] * 255 / 65535;
+            sum += rawData[y][x];
+            ++counting[rawData[y][x]];
             if (rawData[y][x] == 0)
                 continue;
+            if (minVal > rawData[y][x]) minVal = rawData[y][x];
+            if (minVal < rawData[y][x]) maxVal = rawData[y][x];
             if (x < validRange[0].x){
                 validRange[0].x = x;
                 validRange[0].y = y;
@@ -149,16 +174,88 @@ Spectum::Spectum(const cv::Mat& image){
             }
         }
     }
+    totalPixel = width * height - counting[0];
+    mean = sum / totalPixel;
+    CDF[0] = counting[0] = 0;
+    for (int val = 1; val < SPECT_VALUE_RANGE; val++){
+        hist[val] = static_cast<float>(counting[val]) / totalPixel;
+        if (hist[val] > HistHeight) HistHeight = hist[val];
+        counting[val] = counting[val-1] + counting[val];
+        CDF[val] = static_cast<double>(counting[val]) / totalPixel;
+    }
+    strechRange.first = 0; strechRange.second = SPECT_VALUE_RANGE - 1;
     for (int i = 0; i < 4; i++){
         validRange[i].x /= width;
         validRange[i].y /= height;
     }
 }
+unsigned short Spectum::average(int y,int x){
+    return static_cast<unsigned short>(CDF[rawData[y][x]] * (SPECT_VALUE_RANGE - 1));
+}
+unsigned short Spectum::strech(int y,int x){
+    double streched = static_cast<double>(rawData[y][x] - strechRange.first) / (strechRange.second - strechRange.first) * (SPECT_VALUE_RANGE - 1);
+    return static_cast<unsigned short>(streched);
+}
+SpectumRange Spectum::setStrech(StrechLevel level){
+    switch (level) {
+        case StrechLevel::noStrech:{
+            strechRange.first = 0;
+            strechRange.second = SPECT_VALUE_RANGE - 1;
+            break;
+        }
+        case StrechLevel::minmaxStrech:{
+            for (int i = 0; i < SPECT_VALUE_RANGE; i++)
+                if (CDF[i] > 0){
+                    if (i == 0)
+                        strechRange.first = i;
+                    else
+                        strechRange.first = i - 1;
+                    break;
+                }
+            for (int i = SPECT_VALUE_RANGE - 1; i >=0; i--)
+                if (CDF[i] < 1){
+                    if (i == SPECT_VALUE_RANGE - 1)
+                        strechRange.second = i;
+                    else
+                        strechRange.second = i + 1;
+                    break;
+                }
+            break;
+        }
+        case StrechLevel::percent1Strech:{
+            for (int i = 0; i < SPECT_VALUE_RANGE; i++)
+                if (CDF[i] > 0.01){
+                    strechRange.first = i;
+                    break;
+                }
+            for (int i = SPECT_VALUE_RANGE - 1; i >=0; i--)
+                if (CDF[i] < 0.99){
+                    strechRange.second = i;
+                    break;
+                }
+            break;
+        }
+        case StrechLevel::percent2Strech:{
+            for (int i = 0; i < SPECT_VALUE_RANGE; i++)
+                if (CDF[i] > 0.02){
+                    strechRange.first = i;
+                    break;
+                }
+            for (int i = SPECT_VALUE_RANGE - 1; i >=0; i--)
+                if (CDF[i] < 0.98){
+                    strechRange.second = i;
+                    break;
+                }
+            break;
+        }
+    }
+    return strechRange;
+}
 Spectum::~Spectum(){
     for (size_t h = 0; h < height; h++)
         delete[] rawData[h];
     delete[] rawData;
-    delete[] showData;
+    //delete[] showData;
 }
 void Primitive::initResource(GLenum shp,Shader* inputshader){
     transMat = glm::mat4(1.0f);
@@ -292,14 +389,91 @@ void Texture::draw() const {
     glBindVertexArray(0);
     return;
 }
-void TextureManager::manage(){
-    
+void TextureManager::processBand(unsigned short* RGB,std::shared_ptr<Spectum> band, int bias){
+    const int width = band->width,height = band->height;
+    for (int y = 0; y < height; y++)
+        for (int x = 0; x < width; x++){
+            int loc = y * width + x;
+            if (toAverage)
+                RGB[loc * 3 + bias] = band->average(y,x);
+            else
+                RGB[loc * 3 + bias] = band->strech(y,x);
+        }
 }
-void TextureManager::average(){
-    
+std::string TextureManager::getStatus(){
+    std::string status = "_" + std::to_string(RGBindex[0]) + std::to_string(RGBindex[1]) + std::to_string(RGBindex[2]);
+    if (toAverage)
+        status += "_aver";
+    return status;
 }
-void TextureManager::strech(){
-    
+double Image::calcCoefficent(size_t bandind1,size_t bandind2){
+    unsigned short **banddata1 = bands[bandind1].value->rawData;
+    unsigned short **banddata2 = bands[bandind2].value->rawData;
+    int width = bands[bandind1].value->width, height = bands[bandind1].value->height;
+    int totalPixel = bands[bandind1].value->totalPixel;
+    double mean1 = bands[bandind1].value->mean, mean2 = bands[bandind2].value->mean;
+    double covariance = 0.0;
+    double variance1 = 0.0, variance2 = 0.0;
+    for (int y = 0; y < height; y++)
+        for (int x = 0; x < width; x++){
+            if (banddata1[y][x] == 0 || banddata2[y][x] == 0)
+                continue;;
+            covariance += (banddata1[y][x] - mean1) * (banddata2[y][x] - mean2);
+            variance1 += (banddata1[y][x] - mean1) * (banddata1[y][x] - mean1);
+            variance2 += (banddata2[y][x] - mean2) * (banddata2[y][x] - mean2);
+        }
+    covariance /= totalPixel;
+    variance1 /= totalPixel;
+    variance2 /= totalPixel;
+    double stddev1 = std::sqrt(variance1);
+    double stddev2 = std::sqrt(variance2);
+    double coefficent = covariance / (stddev1 * stddev2);
+    return coefficent;
+}
+void Image::calcBandCoefficent(){
+    const size_t size = bands.size();
+    correlation = new double*[size];
+    for (size_t i = 0; i < size; i++)
+        correlation[i] = new double[size];
+    for (size_t i = 0; i < size; i++){
+        correlation[i][i] = 1;
+        for (size_t j = i + 1; j < size; j++){
+            double coefficent = calcCoefficent(i, j);
+            correlation[i][j] = coefficent;
+            correlation[j][i] = coefficent;
+        }
+    }
+}
+void Image::showBandCoefficient(){
+    const int size = static_cast<int>(bands.size());
+    if (correlation == nullptr)
+        calcBandCoefficent();
+    if (ImGui::BeginTable("##coefficent", size + 1, ImGuiTableFlags_Borders)) {
+        ImGui::TableSetupColumn("波段数");
+        for (int i = 0; i < size; i++)
+            ImGui::TableSetupColumn(std::string("波段" + std::to_string(i + 1)).c_str());
+        ImGui::TableHeadersRow();
+        for (int i = 0; i < size; i++) {
+            ImGui::TableNextRow();
+            ImGui::TableNextColumn();
+            ImGui::Text("%s", std::string("波段" + std::to_string(i + 1)).c_str());
+            for (int j = 0; j < size; j++) {
+                ImGui::TableNextColumn();
+                std::stringstream oss;
+                oss<<std::setprecision(2)<<correlation[i][j];
+                ImGui::Text("%s", oss.str().c_str());
+            }
+        }
+    }
+    ImGui::EndTable();
+}
+void Image::showBandInfo(int bandindex){
+    ImGui::Text("%s",std::string("最大值" + std::to_string(bands[bandindex].value->maxVal)).c_str());
+    ImGui::SameLine();
+    ImGui::Text("%s",std::string("最小值" + std::to_string(bands[bandindex].value->minVal)).c_str());
+    ImGui::SameLine();
+    ImGui::Text("%s",std::string("平均值" + std::to_string(bands[bandindex].value->mean)).c_str());
+    ImGui::PlotHistogram("##直方图数据", bands[bandindex].value->hist.data(), static_cast<int>(bands[bandindex].value->hist.size()), 0, nullptr, 0.0f, bands[bandindex].value->HistHeight, ImVec2(0, 150));
 }
 void Image::manageBands() {
     if (textureManager.pointIndex > 2){
@@ -308,7 +482,7 @@ void Image::manageBands() {
         gui::toShowManageBand = false;
         return;
     }
-    constexpr std::string colormap[3] = {"red","green","blue"};
+    static constexpr std::array<std::string,3> colormap = {"red","green","blue"};
     ImGui::OpenPopup("Manage Bands");
     ImVec2 pos = ImGui::GetMainViewport()->GetCenter();
     ImGui::SetNextWindowPos(pos);
@@ -332,10 +506,52 @@ void Image::manageBands() {
         }
         ImGui::EndPopup();
     }
-    textureManager.manage();
 }
-void Image::exportImage() const{
-    
+void Image::averageBands(){
+    textureManager.setToAverage(true);
+    deleteTexture();
+    generateTexture();
+}
+void Image::strechBands(StrechLevel level,bool useGlobalRange) {
+    SpectumRange globalRange{65535,0};
+    for (std::vector<Band>::iterator band = bands.begin(); band != bands.end(); band++){
+        SpectumRange bandRange = band->value->setStrech(level);
+        globalRange.first = std::min(globalRange.first,bandRange.first);
+        globalRange.second = std::max(globalRange.second,bandRange.second);
+    }
+    if (useGlobalRange)
+        for (std::vector<Band>::iterator band = bands.begin(); band != bands.end(); band++)
+            band->value->strechRange = globalRange;
+    textureManager.setToAverage(false);
+    deleteTexture();
+    generateTexture();
+}
+void Image::exportImage(std::string filePath){
+    const int width = bands[0].value->width, height = bands[0].value->height;
+    cv::Mat rChannel = cv::Mat::zeros(height, width, CV_8UC1);
+    cv::Mat gChannel = cv::Mat::zeros(height, width, CV_8UC1);
+    cv::Mat bChannel = cv::Mat::zeros(height, width, CV_8UC1);
+    std::shared_ptr<Spectum> rval = bands[textureManager.RGBindex[0]].value;
+    std::shared_ptr<Spectum> gval = bands[textureManager.RGBindex[1]].value;
+    std::shared_ptr<Spectum> bval = bands[textureManager.RGBindex[2]].value;
+    for (int y = 0; y < height; y++)
+        for (int x = 0; x < width; x++){
+            if (textureManager.getToAverage()){
+                rChannel.at<uchar>(y,x) = static_cast<uchar>(static_cast<float>(rval->average(y, x)) * 255 / 65535);
+                gChannel.at<uchar>(y,x) = static_cast<uchar>(static_cast<float>(gval->average(y, x)) * 255 / 65535);
+                bChannel.at<uchar>(y,x) = static_cast<uchar>(static_cast<float>(bval->average(y, x)) * 255 / 65535);
+            }
+            else{
+                rChannel.at<uchar>(y,x) = static_cast<uchar>(static_cast<float>(rval->strech(y, x)) * 255 / 65535);
+                gChannel.at<uchar>(y,x) = static_cast<uchar>(static_cast<float>(gval->strech(y, x)) * 255 / 65535);
+                bChannel.at<uchar>(y,x) = static_cast<uchar>(static_cast<float>(bval->strech(y, x)) * 255 / 65535);
+            }
+        }
+    cv::Mat rgbImage;
+    std::vector<cv::Mat> channels = {rChannel, gChannel, bChannel};
+    cv::merge(channels, rgbImage);
+    cv::imwrite(filePath.c_str(), rgbImage);
+
 }
 std::string Image::getIndicator(int index){
     std::string indicator = "";
@@ -373,13 +589,11 @@ void Image::generateTexture(){
     std::shared_ptr<Spectum> rval = bands[textureManager.RGBindex[0]].value;
     std::shared_ptr<Spectum> gval = bands[textureManager.RGBindex[1]].value;
     std::shared_ptr<Spectum> bval = bands[textureManager.RGBindex[2]].value;
-    const int width = rval->width, height = rval->height, num = width * height;
-    uint8_t *RGB = new unsigned char[num * 3];
-    for (int i = 0; i < num; i++){
-        RGB[3 * i] = bval->showData[i];
-        RGB[3 * i + 1] = gval->showData[i];
-        RGB[3 * i + 2] = rval->showData[i];
-    }
+    const int width = rval->width, height = rval->height;
+    unsigned short *RGB = new unsigned short[width * height * 3];
+    textureManager.processBand(RGB,bval,0);
+    textureManager.processBand(RGB,gval,1);
+    textureManager.processBand(RGB,rval,2);
     GLuint textureID;
     glGenTextures(1, &textureID);
     glBindTexture(GL_TEXTURE_2D, textureID);
@@ -387,7 +601,7 @@ void Image::generateTexture(){
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, RGB);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16, width, height, 0, GL_RGB, GL_UNSIGNED_SHORT, RGB);
     glGenerateMipmap(GL_TEXTURE_2D);
     std::vector<glm::vec3> position;
     std::vector<glm::vec2> texturePos;

@@ -29,13 +29,13 @@ int main(int argc, const char * argv[]) {
     Initialization(window);
     Camera2D& camera = Camera2D::getView();
     LayerManager& layerManager = LayerManager::getLayers();
-    setTestDataset();
+    //setTestDataset();
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
         glClearColor(0,0,0,0);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         gui::DrawBasic();
-        layerManager.Draw();
+        layerManager.draw();
         if (!gui::DrawPopup())
             camera.processKeyboard(window);
         ImGui::Render();

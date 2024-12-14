@@ -74,7 +74,8 @@ int initOpenGL(GLFWwindow *&window,std::string windowName) {
 }
 namespace gui {
 ImFont *englishFont = nullptr,*chineseFont = nullptr;
-bool toImportImage = false,toShowStatistic = false,toShowManageBand = false,toImportROI = false;
+bool toImportImage = false,toImportROI = false;
+bool toShowStatistic = false,toShowManageBand = false,toShowStrechLevel = false;
 int Initialization(GLFWwindow *window) {
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
@@ -115,6 +116,10 @@ bool DrawPopup(){
         ManageBands();
         return true;
     }
+    if (toShowStrechLevel){
+        ChooseStrechLevel();
+        return true;
+    }
     return false;
 }
 void RenderLayerTree(){
@@ -139,34 +144,32 @@ void RenderWorkspace(){
     if (ImGui::Button("导入ROI",ButtonSize))
         toImportROI = true;
     if (buffer.selectedLayer != nullptr){
-        if (buffer.selectedLayer->getType() == LayerType::raster){
-            std::string visbleButtonStr = "隐藏图层";
-            if (!buffer.selectedLayer->getVisble())
-                visbleButtonStr = "显示图层";
-            if (ImGui::Button(visbleButtonStr.c_str(),ButtonSize))
-                buffer.selectedLayer->toggleVisble();
-            ImGui::SameLine();
-            if (ImGui::Button("导出影像",ButtonSize))
-                buffer.selectedLayer->exportImage();
-            if (ImGui::Button("查看信息",ButtonSize))
-                toShowStatistic = true;
-            ImGui::SameLine();
-            if (ImGui::Button("波段重组",ButtonSize)){
-                toShowManageBand = true;
-                buffer.selectedLayer->ResetBandIndex();
-            }
-            if (ImGui::Button("直方图均衡化",ButtonSize))
-                buffer.selectedLayer->averageBands();
-            ImGui::SameLine();
-            if (ImGui::Button("对比度拉伸",ButtonSize))
-                buffer.selectedLayer->strechBands();
-            if (ImGui::Button("频域滤波",ButtonSize)){
-                
-            }
-            ImGui::SameLine();
-            if (ImGui::Button("空间滤波",ButtonSize)){
-                
-            }
+        std::string visbleButtonStr = "隐藏图层";
+        if (!buffer.selectedLayer->getVisble())
+            visbleButtonStr = "显示图层";
+        if (ImGui::Button(visbleButtonStr.c_str(),ButtonSize))
+            buffer.selectedLayer->toggleVisble();
+        ImGui::SameLine();
+        if (ImGui::Button("导出影像",ButtonSize))
+            buffer.selectedLayer->exportImage();
+        if (ImGui::Button("查看信息",ButtonSize))
+            toShowStatistic = true;
+        ImGui::SameLine();
+        if (ImGui::Button("波段重组",ButtonSize)){
+            toShowManageBand = true;
+            buffer.selectedLayer->resetBandIndex();
+        }
+        if (ImGui::Button("直方图均衡化",ButtonSize))
+            buffer.selectedLayer->averageBands();
+        ImGui::SameLine();
+        if (ImGui::Button("对比度拉伸",ButtonSize))
+            toShowStrechLevel = true;
+        if (ImGui::Button("谱域滤波",ButtonSize)){
+            
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("空间滤波",ButtonSize)){
+            
         }
     }
     style.FramePadding = ImVec2(4.0f, 2.0f);
@@ -185,7 +188,6 @@ void ImportImage(){
         ImGui::InputText("##input", inputBuffer, sizeof(inputBuffer));
         if (ImGui::Button("确认")) {
             pParser parser = std::make_shared<Landsat8BundleParser>(inputBuffer);
-            parser->PrintInfo();
             LayerManager& layerManager = LayerManager::getLayers();
             layerManager.importlayer(parser);
             inputBuffer[0] = '\0';
@@ -209,5 +211,9 @@ void ShowStatistic(){
 void ManageBands(){
     BufferRecorder& buffer = BufferRecorder::getBuffer();
     buffer.selectedLayer->manageBands();
+}
+void ChooseStrechLevel(){
+    BufferRecorder& buffer = BufferRecorder::getBuffer();
+    buffer.selectedLayer->strechBands();
 }
 }
