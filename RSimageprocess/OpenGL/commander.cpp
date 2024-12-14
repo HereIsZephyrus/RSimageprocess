@@ -46,7 +46,7 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
 std::string Layer::getFileName(std::string resourcePath){
     return resourcePath;
 }
-void Layer::Draw(){
+void Layer::draw(){
     using pImage = std::unique_ptr<Image>;
     using pROI = std::unique_ptr<ROIcollection>;
     if (raster != nullptr)  raster->draw();
@@ -260,11 +260,11 @@ void LayerManager::printLayerTree(){
         current = current->next;
     }
 }
-void LayerManager::Draw(){
+void LayerManager::draw(){
     pLayer current = tail;
     while (current != nullptr){
         if (current->getVisble())
-            current->Draw();
+            current->draw();
         current = current->prev;
     }
 }

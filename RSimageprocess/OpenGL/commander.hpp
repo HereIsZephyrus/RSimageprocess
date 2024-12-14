@@ -41,7 +41,7 @@ public:
     name(layerName),prev(nullptr),next(nullptr),visble(true),vector(nullptr),parser(nullptr){
         raster = std::make_unique<Image>(vertices);
     }
-    void Draw();
+    void draw();
     bool BuildLayerStack();
     std::string getName() const{return name;}
     std::shared_ptr<Layer> prev,next;
@@ -53,7 +53,7 @@ public:
     void manageBands() const{raster->manageBands();}
     void averageBands() {raster->averageBands();}
     void strechBands();
-    void ResetBandIndex(){raster->ResetIndex();}
+    void resetBandIndex(){raster->resetIndex();}
 };
 class LayerManager{
     using pLayer = std::shared_ptr<Layer>;
@@ -80,7 +80,7 @@ public:
     void moveLayerUp(pLayer swapLayer);
     void moveLayerDown(pLayer swapLayer);
     void printLayerTree();
-    void Draw();
+    void draw();
 };
 class BufferRecorder{
 public:

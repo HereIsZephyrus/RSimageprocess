@@ -132,7 +132,7 @@ public:
     void deleteTexture() {texture = nullptr;}
     void createtexture(pTexture texturePtr) {texture = texturePtr;}
     void processBand(unsigned short* RGB,std::shared_ptr<Spectum> band, int bias);
-    void SetToAverage(bool status) {toAverage = status;}
+    void setToAverage(bool status) {toAverage = status;}
 };
 struct Band{
     std::shared_ptr<Spectum> value;
@@ -161,7 +161,7 @@ public:
     void manageBands();
     void averageBands();
     void strechBands(StrechLevel level,bool useGlobalRange);
-    void ResetIndex() {textureManager.pointIndex = 0;}
+    void resetIndex() {textureManager.pointIndex = 0;}
     void showBandInfo(int bandIndex);
     void showBandCoefficient();
     std::string getIndicator(int bandindex);

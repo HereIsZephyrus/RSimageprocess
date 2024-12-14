@@ -502,7 +502,7 @@ void Image::manageBands() {
     }
 }
 void Image::averageBands(){
-    textureManager.SetToAverage(true);
+    textureManager.setToAverage(true);
     deleteTexture();
     generateTexture();
 }
@@ -516,7 +516,7 @@ void Image::strechBands(StrechLevel level,bool useGlobalRange) {
     if (useGlobalRange)
         for (std::vector<Band>::iterator band = bands.begin(); band != bands.end(); band++)
             band->value->strechRange = globalRange;
-    textureManager.SetToAverage(false);
+    textureManager.setToAverage(false);
     deleteTexture();
     generateTexture();
 }
