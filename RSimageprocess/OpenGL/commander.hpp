@@ -49,7 +49,10 @@ public:
     bool getVisble() const {return visble;}
     void toggleVisble() {visble = !visble;}
     void showStatistic() const;
-    void exportImage() const{raster->exportImage();}
+    void exportImage() const{
+        std::string filePath = parser->getBundlePath() + '/' + parser->getFileIdentifer() + raster->getTextureStatus() + ".png";
+        raster->exportImage(filePath);
+    }
     void manageBands() const{raster->manageBands();}
     void averageBands() {raster->averageBands();}
     void strechBands();

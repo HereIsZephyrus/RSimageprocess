@@ -400,6 +400,12 @@ void TextureManager::processBand(unsigned short* RGB,std::shared_ptr<Spectum> ba
                 RGB[loc * 3 + bias] = band->strech(y,x);
         }
 }
+std::string TextureManager::getStatus(){
+    std::string status = "_" + std::to_string(RGBindex[0]) + std::to_string(RGBindex[1]) + std::to_string(RGBindex[2]);
+    if (toAverage)
+        status += "_aver";
+    return status;
+}
 double Image::calcCoefficent(size_t bandind1,size_t bandind2){
     unsigned short **banddata1 = bands[bandind1].value->rawData;
     unsigned short **banddata2 = bands[bandind2].value->rawData;
@@ -520,8 +526,32 @@ void Image::strechBands(StrechLevel level,bool useGlobalRange) {
     deleteTexture();
     generateTexture();
 }
-void Image::exportImage() const{
-    
+void Image::exportImage(std::string filePath){
+    const int width = bands[0].value->width, height = bands[0].value->height;
+    cv::Mat rChannel = cv::Mat::zeros(height, width, CV_8UC1);
+    cv::Mat gChannel = cv::Mat::zeros(height, width, CV_8UC1);
+    cv::Mat bChannel = cv::Mat::zeros(height, width, CV_8UC1);
+    std::shared_ptr<Spectum> rval = bands[textureManager.RGBindex[0]].value;
+    std::shared_ptr<Spectum> gval = bands[textureManager.RGBindex[1]].value;
+    std::shared_ptr<Spectum> bval = bands[textureManager.RGBindex[2]].value;
+    for (int y = 0; y < height; y++)
+        for (int x = 0; x < width; x++){
+            if (textureManager.getToAverage()){
+                rChannel.at<uchar>(y,x) = static_cast<uchar>(static_cast<float>(rval->average(y, x)) * 255 / 65535);
+                gChannel.at<uchar>(y,x) = static_cast<uchar>(static_cast<float>(gval->average(y, x)) * 255 / 65535);
+                bChannel.at<uchar>(y,x) = static_cast<uchar>(static_cast<float>(bval->average(y, x)) * 255 / 65535);
+            }
+            else{
+                rChannel.at<uchar>(y,x) = static_cast<uchar>(static_cast<float>(rval->strech(y, x)) * 255 / 65535);
+                gChannel.at<uchar>(y,x) = static_cast<uchar>(static_cast<float>(gval->strech(y, x)) * 255 / 65535);
+                bChannel.at<uchar>(y,x) = static_cast<uchar>(static_cast<float>(bval->strech(y, x)) * 255 / 65535);
+            }
+        }
+    cv::Mat rgbImage;
+    std::vector<cv::Mat> channels = {rChannel, gChannel, bChannel};
+    cv::merge(channels, rgbImage);
+    cv::imwrite(filePath.c_str(), rgbImage);
+
 }
 std::string Image::getIndicator(int index){
     std::string indicator = "";

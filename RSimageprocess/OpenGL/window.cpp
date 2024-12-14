@@ -157,7 +157,7 @@ void RenderWorkspace(){
         ImGui::SameLine();
         if (ImGui::Button("波段重组",ButtonSize)){
             toShowManageBand = true;
-            buffer.selectedLayer->ResetBandIndex();
+            buffer.selectedLayer->resetBandIndex();
         }
         if (ImGui::Button("直方图均衡化",ButtonSize))
             buffer.selectedLayer->averageBands();
@@ -188,7 +188,6 @@ void ImportImage(){
         ImGui::InputText("##input", inputBuffer, sizeof(inputBuffer));
         if (ImGui::Button("确认")) {
             pParser parser = std::make_shared<Landsat8BundleParser>(inputBuffer);
-            parser->PrintInfo();
             LayerManager& layerManager = LayerManager::getLayers();
             layerManager.importlayer(parser);
             inputBuffer[0] = '\0';

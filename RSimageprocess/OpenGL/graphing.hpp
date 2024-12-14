@@ -133,6 +133,8 @@ public:
     void createtexture(pTexture texturePtr) {texture = texturePtr;}
     void processBand(unsigned short* RGB,std::shared_ptr<Spectum> band, int bias);
     void setToAverage(bool status) {toAverage = status;}
+    bool getToAverage() const{return toAverage;}
+    std::string getStatus();
 };
 struct Band{
     std::shared_ptr<Spectum> value;
@@ -148,22 +150,25 @@ public:
     explicit Image(const std::vector<Vertex>& faceVertex):
     Primitive(faceVertex,GL_LINE_LOOP,ShaderBucket["line"].get()),textureManager(nullptr),correlation(nullptr){}
     ~Image(){
-        for (size_t i = 0; i < bands.size(); i++)
-            delete[] correlation[i];
-        delete[] correlation;
+        if (correlation != nullptr){
+            for (size_t i = 0; i < bands.size(); i++)
+                delete[] correlation[i];
+            delete[] correlation;
+        }
     }
     void LoadNewBand(std::string searchingPath,std::string wavelength);
     void draw() const override;
     const std::vector<Band>& getBands(){return bands;}
     void generateTexture();
     void deleteTexture() {textureManager.deleteTexture();}
-    void exportImage() const;
+    void exportImage(std::string filePath);
     void manageBands();
     void averageBands();
     void strechBands(StrechLevel level,bool useGlobalRange);
     void resetIndex() {textureManager.pointIndex = 0;}
     void showBandInfo(int bandIndex);
     void showBandCoefficient();
+    std::string getTextureStatus(){return textureManager.getStatus();}
     std::string getIndicator(int bandindex);
 };
 class ROI : public Primitive{
