@@ -139,34 +139,32 @@ void RenderWorkspace(){
     if (ImGui::Button("导入ROI",ButtonSize))
         toImportROI = true;
     if (buffer.selectedLayer != nullptr){
-        if (buffer.selectedLayer->getType() == LayerType::raster){
-            std::string visbleButtonStr = "隐藏图层";
-            if (!buffer.selectedLayer->getVisble())
-                visbleButtonStr = "显示图层";
-            if (ImGui::Button(visbleButtonStr.c_str(),ButtonSize))
-                buffer.selectedLayer->toggleVisble();
-            ImGui::SameLine();
-            if (ImGui::Button("导出影像",ButtonSize))
-                buffer.selectedLayer->exportImage();
-            if (ImGui::Button("查看信息",ButtonSize))
-                toShowStatistic = true;
-            ImGui::SameLine();
-            if (ImGui::Button("波段重组",ButtonSize)){
-                toShowManageBand = true;
-                buffer.selectedLayer->ResetBandIndex();
-            }
-            if (ImGui::Button("直方图均衡化",ButtonSize))
-                buffer.selectedLayer->averageBands();
-            ImGui::SameLine();
-            if (ImGui::Button("对比度拉伸",ButtonSize))
-                buffer.selectedLayer->strechBands();
-            if (ImGui::Button("频域滤波",ButtonSize)){
-                
-            }
-            ImGui::SameLine();
-            if (ImGui::Button("空间滤波",ButtonSize)){
-                
-            }
+        std::string visbleButtonStr = "隐藏图层";
+        if (!buffer.selectedLayer->getVisble())
+            visbleButtonStr = "显示图层";
+        if (ImGui::Button(visbleButtonStr.c_str(),ButtonSize))
+            buffer.selectedLayer->toggleVisble();
+        ImGui::SameLine();
+        if (ImGui::Button("导出影像",ButtonSize))
+            buffer.selectedLayer->exportImage();
+        if (ImGui::Button("查看信息",ButtonSize))
+            toShowStatistic = true;
+        ImGui::SameLine();
+        if (ImGui::Button("波段重组",ButtonSize)){
+            toShowManageBand = true;
+            buffer.selectedLayer->ResetBandIndex();
+        }
+        if (ImGui::Button("直方图均衡化",ButtonSize))
+            buffer.selectedLayer->averageBands();
+        ImGui::SameLine();
+        if (ImGui::Button("对比度拉伸",ButtonSize))
+            buffer.selectedLayer->strechBands();
+        if (ImGui::Button("频域滤波",ButtonSize)){
+            
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("空间滤波",ButtonSize)){
+            
         }
     }
     style.FramePadding = ImVec2(4.0f, 2.0f);

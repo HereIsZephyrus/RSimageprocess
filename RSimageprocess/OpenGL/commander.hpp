@@ -22,52 +22,37 @@
 #include "graphing.hpp"
 #include "camera.hpp"
 #include "../interface.hpp"
-enum class LayerType{
-    raster,
-    vector
-};
 class LayerManager;
 class Layer{
-    std::variant<std::unique_ptr<Image>,std::unique_ptr<ROIcollection>> object;
+    std::unique_ptr<Image> raster;
+    std::unique_ptr<ROIcollection> vector;
     std::string name;
-    LayerType type;
     bool visble;
     std::string getFileName(std::string resourcePath);
-    std::string getIndicator(int index);
+    std::string getIndicator(int index){return raster->getIndicator(index);}
 public:
     friend LayerManager;
     Layer(std::string layerName,std::string resourcePath):
-    name(layerName),prev(nullptr),next(nullptr),type(LayerType::vector),visble(true){
-        object = std::make_unique<ROIcollection>(resourcePath);
+    name(layerName),prev(nullptr),next(nullptr),visble(true),raster(nullptr){
+        vector = std::make_unique<ROIcollection>(resourcePath);
     }
     Layer(std::string layerName, const std::vector<Vertex>& vertices):
-    
-    name(layerName),prev(nullptr),next(nullptr),type(LayerType::raster),visble(true){
-        object = std::make_unique<Image>(vertices);
+    name(layerName),prev(nullptr),next(nullptr),visble(true),vector(nullptr){
+        raster = std::make_unique<Image>(vertices);
     }
     void Draw();
     bool BuildLayerStack();
     std::string getName() const{return name;}
     std::shared_ptr<Layer> prev,next;
-    Extent getExtent() const{
-        if (type == LayerType::raster)
-            return std::get<std::unique_ptr<Image>>(object)->getExtent();
-        else
-            return std::get<std::unique_ptr<ROIcollection>>(object)->getExtent();
-    }
-    LayerType getType() const {return type;}
+    Extent getExtent() const{return raster->getExtent();}
     bool getVisble() const {return visble;}
     void toggleVisble() {visble = !visble;}
     void showStatistic() const;
-    void exportImage() const;
-    void manageBands();
-    void averageBands();
-    void strechBands();
-    void ResetBandIndex(){
-        if (type != LayerType::raster)
-            return;
-        std::get<std::unique_ptr<Image>>(object)->ResetIndex();
-    }
+    void exportImage() const{raster->exportImage();}
+    void manageBands() const{raster->manageBands();}
+    void averageBands() {raster->averageBands();}
+    void strechBands() {raster->strechBands();}
+    void ResetBandIndex(){raster->ResetIndex();}
 };
 class LayerManager{
     using pLayer = std::shared_ptr<Layer>;

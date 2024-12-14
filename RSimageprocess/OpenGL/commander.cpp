@@ -48,64 +48,35 @@ std::string Layer::getFileName(std::string resourcePath){
 void Layer::Draw(){
     using pImage = std::unique_ptr<Image>;
     using pROI = std::unique_ptr<ROIcollection>;
-    if (type == LayerType::raster){
-        std::get<pImage>(object)->draw();
-    }
-    if (type == LayerType::vector){
-        std::get<pROI>(object)->draw();
-    }
-}
-std::string Layer::getIndicator(int index){
-    std::string indicator = "";
-    if (type != LayerType::raster)
-        return indicator;
-    indicator = std::get<std::unique_ptr<Image>>(object)->getIndicator(index);
-    return indicator;
+    if (raster != nullptr)  raster->draw();
+    if (vector != nullptr)  vector->draw();
 }
 bool Layer::BuildLayerStack(){
     const ImGuiTreeNodeFlags propertyFlag = ImGuiTreeNodeFlags_Leaf;
     bool clicked = false;
-    if (type == LayerType::raster){
-        const std::vector<Band>& bands = std::get<std::unique_ptr<Image>>(object)->getBands();
-        int counter = 0;
-        for (std::vector<Band>::const_reverse_iterator band = bands.rbegin(); band != bands.rend(); band++){
-            std::ostringstream nameOS;
-            std::string bandIndicator = getIndicator(counter);
-            nameOS<<"band"<<++counter<<std::setprecision(1)<<":"<<band->wavelength<<"mm"<<bandIndicator;
-            if (ImGui::TreeNodeEx(nameOS.str().c_str(), propertyFlag)){
-                ImGui::TreePop();
-                if (ImGui::IsItemClicked())
-                    clicked = true;
-            }
+    if (vector != nullptr){
+        if (ImGui::TreeNodeEx("vector", propertyFlag)){
+            ImGui::TreePop();
+            if (ImGui::IsItemClicked())
+                clicked = true;
         }
     }
-    if (type == LayerType::vector){
-        
+    const std::vector<Band>& bands = raster->getBands();
+    int counter = 0;
+    for (std::vector<Band>::const_reverse_iterator band = bands.rbegin(); band != bands.rend(); band++){
+        std::ostringstream nameOS;
+        std::string bandIndicator = getIndicator(counter);
+        nameOS<<"band"<<++counter<<std::setprecision(1)<<":"<<band->wavelength<<"mm"<<bandIndicator;
+        if (ImGui::TreeNodeEx(nameOS.str().c_str(), propertyFlag)){
+            ImGui::TreePop();
+            if (ImGui::IsItemClicked())
+                clicked = true;
+        }
     }
     return clicked;
 }
 void Layer::showStatistic() const{
     
-}
-void Layer::exportImage() const{
-    if (type != LayerType::raster)
-        return;
-    std::get<std::unique_ptr<Image>>(object)->exportImage();
-}
-void Layer::manageBands() {
-    if (type != LayerType::raster)
-        return;
-    std::get<std::unique_ptr<Image>>(object)->manageBands();
-}
-void Layer::averageBands() {
-    if (type != LayerType::raster)
-        return;
-    std::get<std::unique_ptr<Image>>(object)->averageBands();
-}
-void Layer::strechBands(){
-    if (type != LayerType::raster)
-        return;
-    std::get<std::unique_ptr<Image>>(object)->averageBands();
 }
 void LayerManager::addLayer(pLayer newLayer) {
     if (head == nullptr) {
@@ -124,7 +95,7 @@ void LayerManager::importlayer(std::shared_ptr<BundleParser> parser){
         {glm::vec3(parser->geographic.upleft.x,parser->geographic.upleft.y,0.0),glm::vec3(1.0,1.0,1.0)},
     };
     pLayer newLayer = std::make_shared<Layer>(parser->getFileIdentifer(),faceVertices);
-    std::unique_ptr<Image>& image = std::get<std::unique_ptr<Image>>(newLayer->object);
+    std::unique_ptr<Image>& image = newLayer->raster;
     for (std::unordered_map<int, std::string>::iterator rasterInfo = parser->TIFFpathParser.begin(); rasterInfo != parser->TIFFpathParser.end(); rasterInfo++){
         std::string imagePath = parser->getBundlePath() + "/" + rasterInfo->second;
         if (rasterInfo->first > 7)
