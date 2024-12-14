@@ -9,6 +9,7 @@
 #define graphing_hpp
 
 #define GLEW_STATIC
+#define SPECT_VALUE_RANGE 65536
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 #include <cstring>
@@ -23,8 +24,12 @@ struct Spectum{
     unsigned short **rawData;
     int width,height;
     glm::vec2 validRange[4];
-    Spectum(unsigned short* flatd,int w,int h);
+    Spectum(unsigned short* flatd,int w,int h); //deprecated at this time
     Spectum(const cv::Mat& image);
+    std::pair<unsigned short,unsigned short> strechRange;
+    std::array<float,SPECT_VALUE_RANGE> CDF;
+    unsigned short average(int y,int x);
+    unsigned short strech(int y,int x);
     ~Spectum();
 };
 struct Vertex {
@@ -101,15 +106,10 @@ void InitResource(GLFWwindow *window);
 class TextureManager{
 using pTexture = std::shared_ptr<Texture>;
     pTexture texture;
-    unsigned short process(unsigned short input);
-    std::pair<unsigned short,unsigned short> strechRange;
     bool toAverage;
-    std::array<int,65535> CDF;
 public:
     int RGBindex[3],pointIndex;
     TextureManager(pTexture texturePtr) : texture(texturePtr),pointIndex(3),toAverage(false){
-        strechRange = std::make_pair(0,65535);
-        CDF = {0};
         RGBindex[0] = 3; //red
         RGBindex[1] = 2; //green
         RGBindex[2] = 1; //blue
@@ -123,7 +123,7 @@ public:
     void strech();
     void deleteTexture() {texture = nullptr;}
     void createtexture(pTexture texturePtr) {texture = texturePtr;}
-    void generateTextureArray(unsigned short* RGB,std::shared_ptr<Spectum> rval,std::shared_ptr<Spectum> gval,std::shared_ptr<Spectum> bval);
+    void processBand(unsigned short* RGB,std::shared_ptr<Spectum> band, int bias);
 };
 struct Band{
     std::shared_ptr<Spectum> value;

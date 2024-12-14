@@ -81,11 +81,13 @@ Spectum::Spectum(unsigned short* flatd,int w,int h):width(w),height(h){
     if (width % 2) width--;
     if (height%2)height--;
     rawData = new unsigned short*[height];
+    std::array<int, SPECT_VALUE_RANGE> hist;
     for (int y = 0; y < height; y++){
         rawData[y] = new unsigned short[width];
         for (int x = 0; x < width; x++){
             int loc = y * width + x;
             rawData[y][x] = flatd[loc];
+            ++hist[rawData[y][x]];
             if (rawData[y][x] == 0)
                 continue;
             if (x < validRange[0].x){
@@ -106,6 +108,12 @@ Spectum::Spectum(unsigned short* flatd,int w,int h):width(w),height(h){
             }
         }
     }
+    CDF[0] = hist[0];
+    for (int val = 1; val < SPECT_VALUE_RANGE; val++){
+        CDF[val] = CDF[val-1] + hist[val];
+        CDF[val] = (CDF[val] - CDF[0]) / (width * height - CDF[0]) * (SPECT_VALUE_RANGE - 1);
+    }
+    strechRange.first = 0; strechRange.second = SPECT_VALUE_RANGE - 1;
     for (int i = 0; i < 3; i++){
         validRange[i].x /= width;
         validRange[i].y /= height;
@@ -120,6 +128,7 @@ Spectum::Spectum(const cv::Mat& image){
     if (width % 2) width--;
     if (height%2)height--;
     rawData = new unsigned short*[height];
+    std::array<int, SPECT_VALUE_RANGE> hist;
     for (int y = 0; y < height; y++){
         rawData[y] = new unsigned short[width];
         for (int x = 0; x < width; x++){
@@ -144,10 +153,23 @@ Spectum::Spectum(const cv::Mat& image){
             }
         }
     }
+    CDF[0] = hist[0];
+    for (int val = 1; val < SPECT_VALUE_RANGE; val++){
+        CDF[val] = CDF[val-1] + hist[val];
+        CDF[val] = (CDF[val] - CDF[0]) / (width * height - CDF[0]) * (SPECT_VALUE_RANGE - 1);
+    }
+    strechRange.first = 0; strechRange.second = SPECT_VALUE_RANGE - 1;
     for (int i = 0; i < 4; i++){
         validRange[i].x /= width;
         validRange[i].y /= height;
     }
+}
+unsigned short Spectum::average(int y,int x){
+    return static_cast<unsigned char>(CDF[rawData[y][x]]);
+}
+unsigned short Spectum::strech(int y,int x){
+    double streched = static_cast<double>(rawData[y][x] - strechRange.first) / (strechRange.second - strechRange.first) * (SPECT_VALUE_RANGE - 1);
+    return static_cast<unsigned short>(streched);
 }
 Spectum::~Spectum(){
     for (size_t h = 0; h < height; h++)
@@ -287,11 +309,16 @@ void Texture::draw() const {
     glBindVertexArray(0);
     return;
 }
-unsigned short TextureManager::process(unsigned short input){
-    if (toAverage)
-        return static_cast<unsigned short>(CDF[input]);
-    double normalizePixel = static_cast<double>(input - strechRange.first) / 65535;
-    return  static_cast<unsigned short>(normalizePixel * (strechRange.second - strechRange.first));
+void TextureManager::processBand(unsigned short* RGB,std::shared_ptr<Spectum> band, int bias){
+    const int width = band->width,height = band->height;
+    for (int y = 0; y < height; y++)
+        for (int x = 0; x < width; x++){
+            int loc = y * width + x;
+            if (toAverage)
+                RGB[loc * 3 + bias] = band->average(y,x);
+            else
+                RGB[loc * 3 + bias] = band->strech(y,x);
+        }
 }
 void TextureManager::manage(){
     
@@ -301,16 +328,6 @@ void TextureManager::average(){
 }
 void TextureManager::strech(){
     
-}
-void TextureManager::generateTextureArray(unsigned short* RGB,std::shared_ptr<Spectum> rval,std::shared_ptr<Spectum> gval,std::shared_ptr<Spectum> bval){
-    const int width = rval->width,height = rval->height;
-    for (int y = 0; y < height; y++)
-        for (int x = 0; x < width; x++){
-            int loc = y * width + x;
-            RGB[loc * 3 + 0] = process(bval->rawData[y][x]);
-            RGB[loc * 3 + 1] = process(gval->rawData[y][x]);
-            RGB[loc * 3 + 2] = process(rval->rawData[y][x]);
-        }
 }
 void Image::manageBands() {
     if (textureManager.pointIndex > 2){
@@ -386,7 +403,9 @@ void Image::generateTexture(){
     std::shared_ptr<Spectum> bval = bands[textureManager.RGBindex[2]].value;
     const int width = rval->width, height = rval->height;
     unsigned short *RGB = new unsigned short[width * height * 3];
-    textureManager.generateTextureArray(RGB, rval, gval, bval);
+    textureManager.processBand(RGB,bval,0);
+    textureManager.processBand(RGB,gval,1);
+    textureManager.processBand(RGB,rval,2);
     GLuint textureID;
     glGenTextures(1, &textureID);
     glBindTexture(GL_TEXTURE_2D, textureID);
