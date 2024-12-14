@@ -194,6 +194,8 @@ unsigned short Spectum::average(int y,int x){
 }
 unsigned short Spectum::strech(int y,int x){
     double streched = static_cast<double>(rawData[y][x] - strechRange.first) / (strechRange.second - strechRange.first) * (SPECT_VALUE_RANGE - 1);
+    if (streched < 0)                       return 0;
+    if (streched > SPECT_VALUE_RANGE - 1)   return SPECT_VALUE_RANGE - 1;
     return static_cast<unsigned short>(streched);
 }
 SpectumRange Spectum::setStrech(StrechLevel level){
