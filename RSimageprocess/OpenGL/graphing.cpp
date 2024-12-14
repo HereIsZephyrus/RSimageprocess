@@ -171,7 +171,7 @@ Spectum::Spectum(const cv::Mat& image){
     }
 }
 unsigned short Spectum::average(int y,int x){
-    return static_cast<unsigned char>(CDF[rawData[y][x]] * (SPECT_VALUE_RANGE - 1));
+    return static_cast<unsigned short>(CDF[rawData[y][x]] * (SPECT_VALUE_RANGE - 1));
 }
 unsigned short Spectum::strech(int y,int x){
     double streched = static_cast<double>(rawData[y][x] - strechRange.first) / (strechRange.second - strechRange.first) * (SPECT_VALUE_RANGE - 1);
@@ -428,6 +428,7 @@ void Image::strechBands(StrechLevel level,bool useGlobalRange) {
     if (useGlobalRange)
         for (std::vector<Band>::iterator band = bands.begin(); band != bands.end(); band++)
             band->value->strechRange = globalRange;
+    textureManager.SetToAverage(false);
     deleteTexture();
     generateTexture();
 }

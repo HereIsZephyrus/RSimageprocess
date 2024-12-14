@@ -29,7 +29,7 @@ int main(int argc, const char * argv[]) {
     Initialization(window);
     Camera2D& camera = Camera2D::getView();
     LayerManager& layerManager = LayerManager::getLayers();
-    setTestDataset();
+    //setTestDataset();
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
         glClearColor(0,0,0,0);
