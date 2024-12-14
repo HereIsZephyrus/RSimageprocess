@@ -92,6 +92,7 @@ void Layer::strechBands() {
     if (ImGui::BeginPopup("Choose Strech Level")) {
         ImGui::PushFont(gui::chineseFont);
         static int selectedItem = 0;
+        static bool useGlobalRange = false;
         if (ImGui::BeginCombo("选择一种方式", strechList[selectedItem].second.c_str())) {
             for (int i = 0; i < strechList.size(); ++i) {
                 bool isSelected = (selectedItem == i);
@@ -103,7 +104,7 @@ void Layer::strechBands() {
             ImGui::EndCombo();
         }
         if (ImGui::Button("确认")) {
-            raster->strechBands(strechList[selectedItem].first);
+            raster->strechBands(strechList[selectedItem].first,useGlobalRange);
             gui::toShowStrechLevel = false;
             ImGui::CloseCurrentPopup();
         }
@@ -112,6 +113,9 @@ void Layer::strechBands() {
             gui::toShowStrechLevel = false;
             ImGui::CloseCurrentPopup();
         }
+        ImGui::SameLine();
+        if (ImGui::RadioButton("使用全局极值", useGlobalRange))
+            useGlobalRange = !useGlobalRange;
         ImGui::PopFont();
         ImGui::EndPopup();
     }

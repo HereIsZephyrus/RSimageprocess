@@ -177,7 +177,7 @@ unsigned short Spectum::strech(int y,int x){
     double streched = static_cast<double>(rawData[y][x] - strechRange.first) / (strechRange.second - strechRange.first) * (SPECT_VALUE_RANGE - 1);
     return static_cast<unsigned short>(streched);
 }
-void Spectum::setStrech(StrechLevel level){
+SpectumRange Spectum::setStrech(StrechLevel level){
     switch (level) {
         case StrechLevel::noStrech:{
             strechRange.first = 0;
@@ -230,6 +230,7 @@ void Spectum::setStrech(StrechLevel level){
             break;
         }
     }
+    return strechRange;
 }
 Spectum::~Spectum(){
     for (size_t h = 0; h < height; h++)
@@ -417,9 +418,16 @@ void Image::averageBands(){
     deleteTexture();
     generateTexture();
 }
-void Image::strechBands(StrechLevel level) {
-    for (std::vector<Band>::iterator band = bands.begin(); band != bands.end(); band++)
-        band->value->setStrech(level);
+void Image::strechBands(StrechLevel level,bool useGlobalRange) {
+    SpectumRange globalRange{65535,0};
+    for (std::vector<Band>::iterator band = bands.begin(); band != bands.end(); band++){
+        SpectumRange bandRange = band->value->setStrech(level);
+        globalRange.first = std::min(globalRange.first,bandRange.first);
+        globalRange.second = std::max(globalRange.second,bandRange.second);
+    }
+    if (useGlobalRange)
+        for (std::vector<Band>::iterator band = bands.begin(); band != bands.end(); band++)
+            band->value->strechRange = globalRange;
     deleteTexture();
     generateTexture();
 }

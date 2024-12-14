@@ -26,17 +26,18 @@ enum class StrechLevel{
     percent1Strech,
     percent2Strech,
 };
+typedef std::pair<unsigned short,unsigned short> SpectumRange;
 struct Spectum{
     unsigned short **rawData;
     int width,height;
     glm::vec2 validRange[4];
     Spectum(unsigned short* flatd,int w,int h); //deprecated at this time
     Spectum(const cv::Mat& image);
-    std::pair<unsigned short,unsigned short> strechRange;
+    SpectumRange strechRange;
     std::array<float,SPECT_VALUE_RANGE> CDF;
     unsigned short average(int y,int x);
     unsigned short strech(int y,int x);
-    void setStrech(StrechLevel level);
+    SpectumRange setStrech(StrechLevel level);
     ~Spectum();
 };
 struct Vertex {
@@ -148,7 +149,7 @@ public:
     void exportImage() const;
     void manageBands();
     void averageBands();
-    void strechBands(StrechLevel level);
+    void strechBands(StrechLevel level,bool useGlobalRange);
     void ResetIndex() {textureManager.pointIndex = 0;}
     std::string getIndicator(int index);
 };
