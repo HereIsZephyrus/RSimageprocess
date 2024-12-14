@@ -36,7 +36,8 @@ struct Spectum{
     Spectum(unsigned short* flatd,int w,int h); //deprecated at this time
     Spectum(const cv::Mat& image);
     SpectumRange strechRange;
-    std::array<float,SPECT_VALUE_RANGE> CDF;
+    std::array<float,SPECT_VALUE_RANGE> CDF,hist;
+    float HistHeight;
     unsigned short average(int y,int x);
     unsigned short strech(int y,int x);
     SpectumRange setStrech(StrechLevel level);

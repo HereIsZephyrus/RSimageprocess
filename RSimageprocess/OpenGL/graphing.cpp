@@ -81,8 +81,8 @@ Spectum::Spectum(unsigned short* flatd,int w,int h):width(w),height(h){
     if (width % 2) width--;
     if (height%2)height--;
     rawData = new unsigned short*[height];
-    std::array<int, SPECT_VALUE_RANGE> hist;
-    hist = {0};
+    std::array<int, SPECT_VALUE_RANGE> counting;
+    counting = {0};
     CDF = {0.0f};
     minVal = SPECT_VALUE_RANGE - 1;
     maxVal = 0;
@@ -92,7 +92,7 @@ Spectum::Spectum(unsigned short* flatd,int w,int h):width(w),height(h){
         for (int x = 0; x < width; x++){
             int loc = y * width + x;
             rawData[y][x] = flatd[loc];
-            ++hist[rawData[y][x]];
+            ++counting[rawData[y][x]];
             if (rawData[y][x] == 0)
                 continue;
             if (minVal > rawData[y][x]) minVal = rawData[y][x];
@@ -115,12 +115,15 @@ Spectum::Spectum(unsigned short* flatd,int w,int h):width(w),height(h){
             }
         }
     }
-    totalPixel = width * height - hist[0];
+    totalPixel = width * height - counting[0];
     mean = sum / totalPixel;
-    CDF[0] = hist[0];
+    CDF[0] = counting[0];
+    HistHeight = 0;
     for (int val = 1; val < SPECT_VALUE_RANGE; val++){
-        CDF[val] = CDF[val-1] + hist[val];
-        CDF[val] = (CDF[val] - CDF[0]) / (width * height - CDF[0]);
+        hist[val] = static_cast<float>(counting[val]) / totalPixel;
+        if (hist[val] > HistHeight) HistHeight = hist[val];
+        counting[val] = counting[val-1] + counting[val];
+        CDF[val] = static_cast<double>(counting[val]) / totalPixel;
     }
     strechRange.first = 0; strechRange.second = SPECT_VALUE_RANGE - 1;
     for (int i = 0; i < 3; i++){
@@ -137,8 +140,8 @@ Spectum::Spectum(const cv::Mat& image){
     if (width % 2) width--;
     if (height%2)height--;
     rawData = new unsigned short*[height];
-    std::array<int, SPECT_VALUE_RANGE> hist;
-    hist = {0};
+    std::array<int, SPECT_VALUE_RANGE> counting;
+    counting = {0};
     CDF = {0.0f};
     minVal = SPECT_VALUE_RANGE - 1;
     maxVal = 0;
@@ -148,7 +151,7 @@ Spectum::Spectum(const cv::Mat& image){
         for (int x = 0; x < width; x++){
             rawData[y][x] = image.at<ushort>(y,x);
             sum += rawData[y][x];
-            ++hist[rawData[y][x]];
+            ++counting[rawData[y][x]];
             if (rawData[y][x] == 0)
                 continue;
             if (minVal > rawData[y][x]) minVal = rawData[y][x];
@@ -171,12 +174,14 @@ Spectum::Spectum(const cv::Mat& image){
             }
         }
     }
-    totalPixel = width * height - hist[0];
+    totalPixel = width * height - counting[0];
     mean = sum / totalPixel;
-    CDF[0] = hist[0] = 0;
+    CDF[0] = counting[0] = 0;
     for (int val = 1; val < SPECT_VALUE_RANGE; val++){
-        hist[val] = hist[val-1] + hist[val];
-        CDF[val] = static_cast<double>(hist[val]) / totalPixel;
+        hist[val] = static_cast<float>(counting[val]) / totalPixel;
+        if (hist[val] > HistHeight) HistHeight = hist[val];
+        counting[val] = counting[val-1] + counting[val];
+        CDF[val] = static_cast<double>(counting[val]) / totalPixel;
     }
     strechRange.first = 0; strechRange.second = SPECT_VALUE_RANGE - 1;
     for (int i = 0; i < 4; i++){
@@ -462,6 +467,7 @@ void Image::showBandInfo(int bandindex){
     ImGui::Text("%s",std::string("最小值" + std::to_string(bands[bandindex].value->minVal)).c_str());
     ImGui::SameLine();
     ImGui::Text("%s",std::string("平均值" + std::to_string(bands[bandindex].value->mean)).c_str());
+    ImGui::PlotHistogram("##直方图数据", bands[bandindex].value->hist.data(), static_cast<int>(bands[bandindex].value->hist.size()), 0, nullptr, 0.0f, bands[bandindex].value->HistHeight, ImVec2(0, 150));
 }
 void Image::manageBands() {
     if (textureManager.pointIndex > 2){
