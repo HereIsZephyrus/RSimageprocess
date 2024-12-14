@@ -20,7 +20,6 @@
 
 struct Spectum{
     unsigned short **rawData;
-    unsigned char *showData;
     int width,height;
     glm::vec2 validRange[4];
     Spectum(unsigned short* flatd,int w,int h);
@@ -101,6 +100,7 @@ void InitResource(GLFWwindow *window);
 class TextureManager{
 using pTexture = std::shared_ptr<Texture>;
     pTexture texture;
+    unsigned short process(unsigned short input);
 public:
     int RGBindex[3],pointIndex;
     TextureManager(pTexture texturePtr) : texture(texturePtr),pointIndex(3){
@@ -117,6 +117,7 @@ public:
     void strech();
     void deleteTexture() {texture = nullptr;}
     void createtexture(pTexture texturePtr) {texture = texturePtr;}
+    void generateTextureArray(unsigned short* RGB,std::shared_ptr<Spectum> rval,std::shared_ptr<Spectum> gval,std::shared_ptr<Spectum> bval);
 };
 struct Band{
     std::shared_ptr<Spectum> value;

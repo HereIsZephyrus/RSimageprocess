@@ -81,13 +81,11 @@ Spectum::Spectum(unsigned short* flatd,int w,int h):width(w),height(h){
     if (width % 2) width--;
     if (height%2)height--;
     rawData = new unsigned short*[height];
-    showData = new unsigned char[width * height];
     for (int y = 0; y < height; y++){
         rawData[y] = new unsigned short[width];
         for (int x = 0; x < width; x++){
             int loc = y * width + x;
             rawData[y][x] = flatd[loc];
-            showData[loc] = flatd[loc] * 255 / 65535;
             if (rawData[y][x] == 0)
                 continue;
             if (x < validRange[0].x){
@@ -122,13 +120,10 @@ Spectum::Spectum(const cv::Mat& image){
     if (width % 2) width--;
     if (height%2)height--;
     rawData = new unsigned short*[height];
-    showData = new unsigned char[width * height];
     for (int y = 0; y < height; y++){
         rawData[y] = new unsigned short[width];
         for (int x = 0; x < width; x++){
-            int loc = y * width + x;
             rawData[y][x] = image.at<ushort>(y,x);
-            showData[loc] = rawData[y][x] * 255 / 65535;
             if (rawData[y][x] == 0)
                 continue;
             if (x < validRange[0].x){
@@ -158,7 +153,7 @@ Spectum::~Spectum(){
     for (size_t h = 0; h < height; h++)
         delete[] rawData[h];
     delete[] rawData;
-    delete[] showData;
+    //delete[] showData;
 }
 void Primitive::initResource(GLenum shp,Shader* inputshader){
     transMat = glm::mat4(1.0f);
@@ -292,6 +287,9 @@ void Texture::draw() const {
     glBindVertexArray(0);
     return;
 }
+unsigned short TextureManager::process(unsigned short input){
+    return input;
+}
 void TextureManager::manage(){
     
 }
@@ -300,6 +298,16 @@ void TextureManager::average(){
 }
 void TextureManager::strech(){
     
+}
+void TextureManager::generateTextureArray(unsigned short* RGB,std::shared_ptr<Spectum> rval,std::shared_ptr<Spectum> gval,std::shared_ptr<Spectum> bval){
+    const int width = rval->width,height = rval->height;
+    for (int y = 0; y < height; y++)
+        for (int x = 0; x < width; x++){
+            int loc = y * width + x;
+            RGB[loc * 3 + 0] = process(bval->rawData[y][x]);
+            RGB[loc * 3 + 1] = process(gval->rawData[y][x]);
+            RGB[loc * 3 + 2] = process(rval->rawData[y][x]);
+        }
 }
 void Image::manageBands() {
     if (textureManager.pointIndex > 2){
@@ -373,13 +381,9 @@ void Image::generateTexture(){
     std::shared_ptr<Spectum> rval = bands[textureManager.RGBindex[0]].value;
     std::shared_ptr<Spectum> gval = bands[textureManager.RGBindex[1]].value;
     std::shared_ptr<Spectum> bval = bands[textureManager.RGBindex[2]].value;
-    const int width = rval->width, height = rval->height, num = width * height;
-    uint8_t *RGB = new unsigned char[num * 3];
-    for (int i = 0; i < num; i++){
-        RGB[3 * i] = bval->showData[i];
-        RGB[3 * i + 1] = gval->showData[i];
-        RGB[3 * i + 2] = rval->showData[i];
-    }
+    const int width = rval->width, height = rval->height;
+    unsigned short *RGB = new unsigned short[width * height * 3];
+    textureManager.generateTextureArray(RGB, rval, gval, bval);
     GLuint textureID;
     glGenTextures(1, &textureID);
     glBindTexture(GL_TEXTURE_2D, textureID);
@@ -387,7 +391,7 @@ void Image::generateTexture(){
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, RGB);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16, width, height, 0, GL_RGB, GL_UNSIGNED_SHORT, RGB);
     glGenerateMipmap(GL_TEXTURE_2D);
     std::vector<glm::vec3> position;
     std::vector<glm::vec2> texturePos;
