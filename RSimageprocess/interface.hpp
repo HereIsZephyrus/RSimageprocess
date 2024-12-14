@@ -30,6 +30,7 @@ protected:
 public:
     explicit BundleParser(std::string filePath);
     void PrintInfo();
+    void ShowInfo();
     virtual std::string getWaveLength(int bandindex) = 0;
     std::string getFileIdentifer() const {return fileIdentifier;}
     std::string getBundlePath() const {return bundlePath;}
