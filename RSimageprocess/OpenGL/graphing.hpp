@@ -20,6 +20,12 @@
 #include <opencv2/opencv.hpp>
 #include "camera.hpp"
 
+enum class StrechLevel{
+    noStrech,
+    minmaxStrech,
+    percent1Strech,
+    percent2Strech,
+};
 struct Spectum{
     unsigned short **rawData;
     int width,height;
@@ -30,6 +36,7 @@ struct Spectum{
     std::array<float,SPECT_VALUE_RANGE> CDF;
     unsigned short average(int y,int x);
     unsigned short strech(int y,int x);
+    void setStrech(StrechLevel level);
     ~Spectum();
 };
 struct Vertex {
@@ -118,12 +125,10 @@ public:
         if (texture != nullptr)
             texture->draw();
     }
-    void manage();
-    void average();
-    void strech();
     void deleteTexture() {texture = nullptr;}
     void createtexture(pTexture texturePtr) {texture = texturePtr;}
     void processBand(unsigned short* RGB,std::shared_ptr<Spectum> band, int bias);
+    void SetToAverage(bool status) {toAverage = status;}
 };
 struct Band{
     std::shared_ptr<Spectum> value;
@@ -142,8 +147,8 @@ public:
     void deleteTexture() {textureManager.deleteTexture();}
     void exportImage() const;
     void manageBands();
-    void averageBands() {textureManager.average();}
-    void strechBands() {textureManager.strech();}
+    void averageBands();
+    void strechBands(StrechLevel level);
     void ResetIndex() {textureManager.pointIndex = 0;}
     std::string getIndicator(int index);
 };

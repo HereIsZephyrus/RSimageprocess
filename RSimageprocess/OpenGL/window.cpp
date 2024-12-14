@@ -74,7 +74,8 @@ int initOpenGL(GLFWwindow *&window,std::string windowName) {
 }
 namespace gui {
 ImFont *englishFont = nullptr,*chineseFont = nullptr;
-bool toImportImage = false,toShowStatistic = false,toShowManageBand = false,toImportROI = false;
+bool toImportImage = false,toImportROI = false;
+bool toShowStatistic = false,toShowManageBand = false,toShowStrechLevel = false;
 int Initialization(GLFWwindow *window) {
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
@@ -113,6 +114,10 @@ bool DrawPopup(){
     }
     if (toShowManageBand){
         ManageBands();
+        return true;
+    }
+    if (toShowStrechLevel){
+        ChooseStrechLevel();
         return true;
     }
     return false;
@@ -158,7 +163,7 @@ void RenderWorkspace(){
             buffer.selectedLayer->averageBands();
         ImGui::SameLine();
         if (ImGui::Button("对比度拉伸",ButtonSize))
-            buffer.selectedLayer->strechBands();
+            toShowStrechLevel = true;
         if (ImGui::Button("频域滤波",ButtonSize)){
             
         }
@@ -207,5 +212,9 @@ void ShowStatistic(){
 void ManageBands(){
     BufferRecorder& buffer = BufferRecorder::getBuffer();
     buffer.selectedLayer->manageBands();
+}
+void ChooseStrechLevel(){
+    BufferRecorder& buffer = BufferRecorder::getBuffer();
+    buffer.selectedLayer->strechBands();
 }
 }

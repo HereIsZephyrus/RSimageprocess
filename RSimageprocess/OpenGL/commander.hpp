@@ -51,7 +51,7 @@ public:
     void exportImage() const{raster->exportImage();}
     void manageBands() const{raster->manageBands();}
     void averageBands() {raster->averageBands();}
-    void strechBands() {raster->strechBands();}
+    void strechBands();
     void ResetBandIndex(){raster->ResetIndex();}
 };
 class LayerManager{

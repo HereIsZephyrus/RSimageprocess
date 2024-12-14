@@ -6,6 +6,7 @@
 //
 
 #include "commander.hpp"
+#include "window.hpp"
 #include "../interface.hpp"
 
 void BufferRecorder::initIO(GLFWwindow* window){
@@ -77,6 +78,43 @@ bool Layer::BuildLayerStack(){
 }
 void Layer::showStatistic() const{
     
+}
+void Layer::strechBands() {
+    static constexpr std::array<std::pair<StrechLevel,std::string>,4> strechList{
+        std::make_pair(StrechLevel::noStrech,"不拉伸"),
+        std::make_pair(StrechLevel::minmaxStrech,"极值线性拉伸"),
+        std::make_pair(StrechLevel::percent1Strech,"1%线性拉伸"),
+        std::make_pair(StrechLevel::percent2Strech,"2%线性拉伸"),
+    };
+    ImGui::OpenPopup("Choose Strech Level");
+    ImVec2 pos = ImGui::GetMainViewport()->GetCenter();
+    ImGui::SetNextWindowPos(pos);
+    if (ImGui::BeginPopup("Choose Strech Level")) {
+        ImGui::PushFont(gui::chineseFont);
+        static int selectedItem = 0;
+        if (ImGui::BeginCombo("选择一种方式", strechList[selectedItem].second.c_str())) {
+            for (int i = 0; i < strechList.size(); ++i) {
+                bool isSelected = (selectedItem == i);
+                if (ImGui::Selectable(strechList[i].second.c_str(), isSelected))
+                    selectedItem = i;
+                if (isSelected)
+                    ImGui::SetItemDefaultFocus();
+            }
+            ImGui::EndCombo();
+        }
+        if (ImGui::Button("确认")) {
+            raster->strechBands(strechList[selectedItem].first);
+            gui::toShowStrechLevel = false;
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("取消")) {
+            gui::toShowStrechLevel = false;
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::PopFont();
+        ImGui::EndPopup();
+    }
 }
 void LayerManager::addLayer(pLayer newLayer) {
     if (head == nullptr) {

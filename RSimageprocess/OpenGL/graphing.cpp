@@ -82,6 +82,8 @@ Spectum::Spectum(unsigned short* flatd,int w,int h):width(w),height(h){
     if (height%2)height--;
     rawData = new unsigned short*[height];
     std::array<int, SPECT_VALUE_RANGE> hist;
+    hist = {0};
+    CDF = {0.0f};
     for (int y = 0; y < height; y++){
         rawData[y] = new unsigned short[width];
         for (int x = 0; x < width; x++){
@@ -111,7 +113,7 @@ Spectum::Spectum(unsigned short* flatd,int w,int h):width(w),height(h){
     CDF[0] = hist[0];
     for (int val = 1; val < SPECT_VALUE_RANGE; val++){
         CDF[val] = CDF[val-1] + hist[val];
-        CDF[val] = (CDF[val] - CDF[0]) / (width * height - CDF[0]) * (SPECT_VALUE_RANGE - 1);
+        CDF[val] = (CDF[val] - CDF[0]) / (width * height - CDF[0]);
     }
     strechRange.first = 0; strechRange.second = SPECT_VALUE_RANGE - 1;
     for (int i = 0; i < 3; i++){
@@ -129,10 +131,13 @@ Spectum::Spectum(const cv::Mat& image){
     if (height%2)height--;
     rawData = new unsigned short*[height];
     std::array<int, SPECT_VALUE_RANGE> hist;
+    hist = {0};
+    CDF = {0.0f};
     for (int y = 0; y < height; y++){
         rawData[y] = new unsigned short[width];
         for (int x = 0; x < width; x++){
             rawData[y][x] = image.at<ushort>(y,x);
+            ++hist[rawData[y][x]];
             if (rawData[y][x] == 0)
                 continue;
             if (x < validRange[0].x){
@@ -153,10 +158,11 @@ Spectum::Spectum(const cv::Mat& image){
             }
         }
     }
-    CDF[0] = hist[0];
+    int totalPixel = width * height - hist[0];
+    CDF[0] = hist[0] = 0;
     for (int val = 1; val < SPECT_VALUE_RANGE; val++){
-        CDF[val] = CDF[val-1] + hist[val];
-        CDF[val] = (CDF[val] - CDF[0]) / (width * height - CDF[0]) * (SPECT_VALUE_RANGE - 1);
+        hist[val] = hist[val-1] + hist[val];
+        CDF[val] = static_cast<double>(hist[val]) / totalPixel;
     }
     strechRange.first = 0; strechRange.second = SPECT_VALUE_RANGE - 1;
     for (int i = 0; i < 4; i++){
@@ -165,11 +171,65 @@ Spectum::Spectum(const cv::Mat& image){
     }
 }
 unsigned short Spectum::average(int y,int x){
-    return static_cast<unsigned char>(CDF[rawData[y][x]]);
+    return static_cast<unsigned char>(CDF[rawData[y][x]] * (SPECT_VALUE_RANGE - 1));
 }
 unsigned short Spectum::strech(int y,int x){
     double streched = static_cast<double>(rawData[y][x] - strechRange.first) / (strechRange.second - strechRange.first) * (SPECT_VALUE_RANGE - 1);
     return static_cast<unsigned short>(streched);
+}
+void Spectum::setStrech(StrechLevel level){
+    switch (level) {
+        case StrechLevel::noStrech:{
+            strechRange.first = 0;
+            strechRange.second = SPECT_VALUE_RANGE - 1;
+            break;
+        }
+        case StrechLevel::minmaxStrech:{
+            for (int i = 0; i < SPECT_VALUE_RANGE; i++)
+                if (CDF[i] > 0){
+                    if (i == 0)
+                        strechRange.first = i;
+                    else
+                        strechRange.first = i - 1;
+                    break;
+                }
+            for (int i = SPECT_VALUE_RANGE - 1; i >=0; i--)
+                if (CDF[i] < 1){
+                    if (i == SPECT_VALUE_RANGE - 1)
+                        strechRange.second = i;
+                    else
+                        strechRange.second = i + 1;
+                    break;
+                }
+            break;
+        }
+        case StrechLevel::percent1Strech:{
+            for (int i = 0; i < SPECT_VALUE_RANGE; i++)
+                if (CDF[i] > 0.01){
+                    strechRange.first = i;
+                    break;
+                }
+            for (int i = SPECT_VALUE_RANGE - 1; i >=0; i--)
+                if (CDF[i] < 0.99){
+                    strechRange.second = i;
+                    break;
+                }
+            break;
+        }
+        case StrechLevel::percent2Strech:{
+            for (int i = 0; i < SPECT_VALUE_RANGE; i++)
+                if (CDF[i] > 0.02){
+                    strechRange.first = i;
+                    break;
+                }
+            for (int i = SPECT_VALUE_RANGE - 1; i >=0; i--)
+                if (CDF[i] < 0.98){
+                    strechRange.second = i;
+                    break;
+                }
+            break;
+        }
+    }
 }
 Spectum::~Spectum(){
     for (size_t h = 0; h < height; h++)
@@ -320,15 +380,6 @@ void TextureManager::processBand(unsigned short* RGB,std::shared_ptr<Spectum> ba
                 RGB[loc * 3 + bias] = band->strech(y,x);
         }
 }
-void TextureManager::manage(){
-    
-}
-void TextureManager::average(){
-    
-}
-void TextureManager::strech(){
-    
-}
 void Image::manageBands() {
     if (textureManager.pointIndex > 2){
         deleteTexture();
@@ -336,7 +387,7 @@ void Image::manageBands() {
         gui::toShowManageBand = false;
         return;
     }
-    constexpr std::string colormap[3] = {"red","green","blue"};
+    static constexpr std::array<std::string,3> colormap = {"red","green","blue"};
     ImGui::OpenPopup("Manage Bands");
     ImVec2 pos = ImGui::GetMainViewport()->GetCenter();
     ImGui::SetNextWindowPos(pos);
@@ -360,7 +411,17 @@ void Image::manageBands() {
         }
         ImGui::EndPopup();
     }
-    textureManager.manage();
+}
+void Image::averageBands(){
+    textureManager.SetToAverage(true);
+    deleteTexture();
+    generateTexture();
+}
+void Image::strechBands(StrechLevel level) {
+    for (std::vector<Band>::iterator band = bands.begin(); band != bands.end(); band++)
+        band->value->setStrech(level);
+    deleteTexture();
+    generateTexture();
 }
 void Image::exportImage() const{
     
