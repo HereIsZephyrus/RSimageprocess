@@ -14,6 +14,7 @@
 #include <cstring>
 #include <string>
 #include <map>
+#include <array>
 #include <glm/glm.hpp>
 #include <opencv2/opencv.hpp>
 #include "camera.hpp"
@@ -101,9 +102,14 @@ class TextureManager{
 using pTexture = std::shared_ptr<Texture>;
     pTexture texture;
     unsigned short process(unsigned short input);
+    std::pair<unsigned short,unsigned short> strechRange;
+    bool toAverage;
+    std::array<int,65535> CDF;
 public:
     int RGBindex[3],pointIndex;
-    TextureManager(pTexture texturePtr) : texture(texturePtr),pointIndex(3){
+    TextureManager(pTexture texturePtr) : texture(texturePtr),pointIndex(3),toAverage(false){
+        strechRange = std::make_pair(0,65535);
+        CDF = {0};
         RGBindex[0] = 3; //red
         RGBindex[1] = 2; //green
         RGBindex[2] = 1; //blue

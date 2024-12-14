@@ -288,7 +288,10 @@ void Texture::draw() const {
     return;
 }
 unsigned short TextureManager::process(unsigned short input){
-    return input;
+    if (toAverage)
+        return static_cast<unsigned short>(CDF[input]);
+    double normalizePixel = static_cast<double>(input - strechRange.first) / 65535;
+    return  static_cast<unsigned short>(normalizePixel * (strechRange.second - strechRange.first));
 }
 void TextureManager::manage(){
     

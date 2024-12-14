@@ -175,7 +175,7 @@ void LayerManager::printLayerTree(){
         ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(1.0f, 0.0f, 0.0f, 1.0f));
         ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(1.0f, 0.5f, 0.5f, 1.0f));
         ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(1.0f, 0.2f, 0.2f, 1.0f));
-        if (ImGui::Button(std::string("Del " + current->getName()).c_str()))
+        if (ImGui::Button(std::string("Del##" + current->getName()).c_str()))
             removeLayer(current);
         ImGui::PopStyleColor(3);
         if (isOpen){
