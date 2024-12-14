@@ -84,6 +84,9 @@ Spectum::Spectum(unsigned short* flatd,int w,int h):width(w),height(h){
     std::array<int, SPECT_VALUE_RANGE> hist;
     hist = {0};
     CDF = {0.0f};
+    minVal = SPECT_VALUE_RANGE - 1;
+    maxVal = 0;
+    double sum = 0;
     for (int y = 0; y < height; y++){
         rawData[y] = new unsigned short[width];
         for (int x = 0; x < width; x++){
@@ -92,6 +95,8 @@ Spectum::Spectum(unsigned short* flatd,int w,int h):width(w),height(h){
             ++hist[rawData[y][x]];
             if (rawData[y][x] == 0)
                 continue;
+            if (minVal > rawData[y][x]) minVal = rawData[y][x];
+            if (minVal < rawData[y][x]) maxVal = rawData[y][x];
             if (x < validRange[0].x){
                 validRange[0].x = x;
                 validRange[0].y = y;
@@ -110,6 +115,8 @@ Spectum::Spectum(unsigned short* flatd,int w,int h):width(w),height(h){
             }
         }
     }
+    totalPixel = width * height - hist[0];
+    mean = sum / totalPixel;
     CDF[0] = hist[0];
     for (int val = 1; val < SPECT_VALUE_RANGE; val++){
         CDF[val] = CDF[val-1] + hist[val];
@@ -133,13 +140,19 @@ Spectum::Spectum(const cv::Mat& image){
     std::array<int, SPECT_VALUE_RANGE> hist;
     hist = {0};
     CDF = {0.0f};
+    minVal = SPECT_VALUE_RANGE - 1;
+    maxVal = 0;
+    double sum = 0;
     for (int y = 0; y < height; y++){
         rawData[y] = new unsigned short[width];
         for (int x = 0; x < width; x++){
             rawData[y][x] = image.at<ushort>(y,x);
+            sum += rawData[y][x];
             ++hist[rawData[y][x]];
             if (rawData[y][x] == 0)
                 continue;
+            if (minVal > rawData[y][x]) minVal = rawData[y][x];
+            if (minVal < rawData[y][x]) maxVal = rawData[y][x];
             if (x < validRange[0].x){
                 validRange[0].x = x;
                 validRange[0].y = y;
@@ -158,7 +171,8 @@ Spectum::Spectum(const cv::Mat& image){
             }
         }
     }
-    int totalPixel = width * height - hist[0];
+    totalPixel = width * height - hist[0];
+    mean = sum / totalPixel;
     CDF[0] = hist[0] = 0;
     for (int val = 1; val < SPECT_VALUE_RANGE; val++){
         hist[val] = hist[val-1] + hist[val];
@@ -380,6 +394,74 @@ void TextureManager::processBand(unsigned short* RGB,std::shared_ptr<Spectum> ba
             else
                 RGB[loc * 3 + bias] = band->strech(y,x);
         }
+}
+double Image::calcCoefficent(size_t bandind1,size_t bandind2){
+    unsigned short **banddata1 = bands[bandind1].value->rawData;
+    unsigned short **banddata2 = bands[bandind2].value->rawData;
+    int width = bands[bandind1].value->width, height = bands[bandind1].value->height;
+    int totalPixel = bands[bandind1].value->totalPixel;
+    double mean1 = bands[bandind1].value->mean, mean2 = bands[bandind2].value->mean;
+    double covariance = 0.0;
+    double variance1 = 0.0, variance2 = 0.0;
+    for (int y = 0; y < height; y++)
+        for (int x = 0; x < width; x++){
+            if (banddata1[y][x] == 0 || banddata2[y][x] == 0)
+                continue;;
+            covariance += (banddata1[y][x] - mean1) * (banddata2[y][x] - mean2);
+            variance1 += (banddata1[y][x] - mean1) * (banddata1[y][x] - mean1);
+            variance2 += (banddata2[y][x] - mean2) * (banddata2[y][x] - mean2);
+        }
+    covariance /= totalPixel;
+    variance1 /= totalPixel;
+    variance2 /= totalPixel;
+    double stddev1 = std::sqrt(variance1);
+    double stddev2 = std::sqrt(variance2);
+    double coefficent = covariance / (stddev1 * stddev2);
+    return coefficent;
+}
+void Image::calcBandCoefficent(){
+    const size_t size = bands.size();
+    correlation = new double*[size];
+    for (size_t i = 0; i < size; i++)
+        correlation[i] = new double[size];
+    for (size_t i = 0; i < size; i++){
+        correlation[i][i] = 1;
+        for (size_t j = i + 1; j < size; j++){
+            double coefficent = calcCoefficent(i, j);
+            correlation[i][j] = coefficent;
+            correlation[j][i] = coefficent;
+        }
+    }
+}
+void Image::showBandCoefficient(){
+    const int size = static_cast<int>(bands.size());
+    if (correlation == nullptr)
+        calcBandCoefficent();
+    if (ImGui::BeginTable("##coefficent", size + 1, ImGuiTableFlags_Borders)) {
+        ImGui::TableSetupColumn("波段数");
+        for (int i = 0; i < size; i++)
+            ImGui::TableSetupColumn(std::string("波段" + std::to_string(i + 1)).c_str());
+        ImGui::TableHeadersRow();
+        for (int i = 0; i < size; i++) {
+            ImGui::TableNextRow();
+            ImGui::TableNextColumn();
+            ImGui::Text("%s", std::string("波段" + std::to_string(i + 1)).c_str());
+            for (int j = 0; j < size; j++) {
+                ImGui::TableNextColumn();
+                std::stringstream oss;
+                oss<<std::setprecision(2)<<correlation[i][j];
+                ImGui::Text("%s", oss.str().c_str());
+            }
+        }
+    }
+    ImGui::EndTable();
+}
+void Image::showBandInfo(int bandindex){
+    ImGui::Text("%s",std::string("最大值" + std::to_string(bands[bandindex].value->maxVal)).c_str());
+    ImGui::SameLine();
+    ImGui::Text("%s",std::string("最小值" + std::to_string(bands[bandindex].value->minVal)).c_str());
+    ImGui::SameLine();
+    ImGui::Text("%s",std::string("平均值" + std::to_string(bands[bandindex].value->mean)).c_str());
 }
 void Image::manageBands() {
     if (textureManager.pointIndex > 2){

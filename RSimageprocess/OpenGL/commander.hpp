@@ -26,6 +26,7 @@ class LayerManager;
 class Layer{
     std::unique_ptr<Image> raster;
     std::unique_ptr<ROIcollection> vector;
+    std::shared_ptr<BundleParser> parser;
     std::string name;
     bool visble;
     std::string getFileName(std::string resourcePath);
@@ -33,11 +34,11 @@ class Layer{
 public:
     friend LayerManager;
     Layer(std::string layerName,std::string resourcePath):
-    name(layerName),prev(nullptr),next(nullptr),visble(true),raster(nullptr){
+    name(layerName),prev(nullptr),next(nullptr),visble(true),raster(nullptr),parser(nullptr){
         vector = std::make_unique<ROIcollection>(resourcePath);
     }
     Layer(std::string layerName, const std::vector<Vertex>& vertices):
-    name(layerName),prev(nullptr),next(nullptr),visble(true),vector(nullptr){
+    name(layerName),prev(nullptr),next(nullptr),visble(true),vector(nullptr),parser(nullptr){
         raster = std::make_unique<Image>(vertices);
     }
     void Draw();

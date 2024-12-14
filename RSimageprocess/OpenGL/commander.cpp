@@ -77,7 +77,37 @@ bool Layer::BuildLayerStack(){
     return clicked;
 }
 void Layer::showStatistic() const{
-    
+    ImGui::OpenPopup("Statistic Information");
+    ImVec2 pos = ImGui::GetMainViewport()->GetCenter();
+    pos.x /= 2; pos.y /=2;
+    ImGui::SetNextWindowPos(pos);
+    if (ImGui::BeginPopup("Statistic Information")) {
+        ImGui::PushFont(gui::chineseFont);
+        ImGuiStyle& style = ImGui::GetStyle();
+        style.ItemSpacing = ImVec2(16.0f, 8.0f);
+        ImGui::Text("<影像元信息>");
+        parser->ShowInfo();
+        ImGui::Text("<波段相关系数>");
+        raster->showBandCoefficient();
+        ImGui::Text("<波段信息>");
+        static int showBandIndex = 0;
+        ImGui::SameLine();
+        ImGui::Text("%s",std::string("band" + std::to_string(showBandIndex + 1)).c_str());
+        ImGui::SameLine();
+        if (ImGui::ArrowButton("##decrease band index", ImGuiDir_Left))
+            showBandIndex = std::max(showBandIndex - 1, 0);
+        ImGui::SameLine();
+        if (ImGui::ArrowButton("##increase band index", ImGuiDir_Right))
+            showBandIndex = std::min(showBandIndex + 1, static_cast<int>(raster->getBands().size() - 1));
+        raster->showBandInfo(showBandIndex);
+        if (ImGui::Button("确认")) {
+            gui::toShowStatistic = false;
+            ImGui::CloseCurrentPopup();
+        }
+        style.ItemSpacing = ImVec2(8.0f, 4.0f);
+        ImGui::PopFont();
+        ImGui::EndPopup();
+    }
 }
 void Layer::strechBands() {
     static constexpr std::array<std::pair<StrechLevel,std::string>,4> strechList{
@@ -137,6 +167,7 @@ void LayerManager::importlayer(std::shared_ptr<BundleParser> parser){
         {glm::vec3(parser->geographic.upleft.x,parser->geographic.upleft.y,0.0),glm::vec3(1.0,1.0,1.0)},
     };
     pLayer newLayer = std::make_shared<Layer>(parser->getFileIdentifer(),faceVertices);
+    newLayer->parser = parser;
     std::unique_ptr<Image>& image = newLayer->raster;
     for (std::unordered_map<int, std::string>::iterator rasterInfo = parser->TIFFpathParser.begin(); rasterInfo != parser->TIFFpathParser.end(); rasterInfo++){
         std::string imagePath = parser->getBundlePath() + "/" + rasterInfo->second;

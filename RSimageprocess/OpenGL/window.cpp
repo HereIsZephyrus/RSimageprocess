@@ -164,7 +164,7 @@ void RenderWorkspace(){
         ImGui::SameLine();
         if (ImGui::Button("对比度拉伸",ButtonSize))
             toShowStrechLevel = true;
-        if (ImGui::Button("频域滤波",ButtonSize)){
+        if (ImGui::Button("谱域滤波",ButtonSize)){
             
         }
         ImGui::SameLine();

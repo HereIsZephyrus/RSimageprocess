@@ -29,7 +29,9 @@ enum class StrechLevel{
 typedef std::pair<unsigned short,unsigned short> SpectumRange;
 struct Spectum{
     unsigned short **rawData;
-    int width,height;
+    unsigned short maxVal,minVal;
+    int width,height,totalPixel;
+    double mean;
     glm::vec2 validRange[4];
     Spectum(unsigned short* flatd,int w,int h); //deprecated at this time
     Spectum(const cv::Mat& image);
@@ -138,9 +140,17 @@ struct Band{
 class Image : public Primitive{
     std::vector<Band> bands;
     TextureManager textureManager;
+    double **correlation;
+    void calcBandCoefficent();
+    double calcCoefficent(size_t bandind1,size_t bandind2);
 public:
     explicit Image(const std::vector<Vertex>& faceVertex):
-    Primitive(faceVertex,GL_LINE_LOOP,ShaderBucket["line"].get()),textureManager(nullptr){}
+    Primitive(faceVertex,GL_LINE_LOOP,ShaderBucket["line"].get()),textureManager(nullptr),correlation(nullptr){}
+    ~Image(){
+        for (size_t i = 0; i < bands.size(); i++)
+            delete[] correlation[i];
+        delete[] correlation;
+    }
     void LoadNewBand(std::string searchingPath,std::string wavelength);
     void draw() const override;
     const std::vector<Band>& getBands(){return bands;}
@@ -151,7 +161,9 @@ public:
     void averageBands();
     void strechBands(StrechLevel level,bool useGlobalRange);
     void ResetIndex() {textureManager.pointIndex = 0;}
-    std::string getIndicator(int index);
+    void showBandInfo(int bandIndex);
+    void showBandCoefficient();
+    std::string getIndicator(int bandindex);
 };
 class ROI : public Primitive{
     glm::vec3 startPosition;
