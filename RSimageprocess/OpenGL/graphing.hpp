@@ -114,6 +114,23 @@ typedef std::unique_ptr<Shader> pShader;
 extern std::map<std::string,pShader > ShaderBucket;
 void InitResource(GLFWwindow *window);
 
+enum class BandProcessType{
+    meanBlur,
+    gaussianBlur,
+    laplacian,
+    sobel
+};
+class BandProcess{
+    using Matrix = std::vector<std::vector<unsigned short>>;
+    BandProcessType type;
+    std::map<std::string,int> paras;
+    void executeMeanBlur(Matrix& input,Matrix& output) const;
+    void executeGaussianBlur(Matrix& input,Matrix& output) const;
+    void executeLaplacianBlur(Matrix& input,Matrix& output) const;
+    void executeSobelBlur(Matrix& input,Matrix& output) const;
+public:
+    void execute(Matrix& input,Matrix& output) const;
+};
 class TextureManager{
 using pTexture = std::shared_ptr<Texture>;
     pTexture texture;
@@ -131,7 +148,7 @@ public:
     }
     void deleteTexture() {texture = nullptr;}
     void createtexture(pTexture texturePtr) {texture = texturePtr;}
-    void processBand(unsigned short* RGB,std::shared_ptr<Spectum> band, int bias);
+    void processBand(unsigned short* RGB,std::shared_ptr<Spectum> band, int bias, const std::vector<BandProcess>& processes);
     void setToAverage(bool status) {toAverage = status;}
     bool getToAverage() const{return toAverage;}
     std::string getStatus();
@@ -159,7 +176,7 @@ public:
     void LoadNewBand(std::string searchingPath,std::string wavelength);
     void draw() const override;
     const std::vector<Band>& getBands(){return bands;}
-    void generateTexture();
+    void generateTexture(const std::vector<BandProcess>& processes);
     void deleteTexture() {textureManager.deleteTexture();}
     void exportImage(std::string filePath);
     void manageBands();

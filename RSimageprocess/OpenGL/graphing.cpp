@@ -391,15 +391,72 @@ void Texture::draw() const {
     glBindVertexArray(0);
     return;
 }
-void TextureManager::processBand(unsigned short* RGB,std::shared_ptr<Spectum> band, int bias){
+void BandProcess::execute(Matrix& input,Matrix& output) const{
+    switch (type) {
+        case BandProcessType::meanBlur:
+            executeMeanBlur(input, output);
+            break;
+        case BandProcessType::gaussianBlur:
+            executeGaussianBlur(input, output);
+            break;
+        case BandProcessType::laplacian:
+            executeLaplacianBlur(input, output);
+            break;
+        case BandProcessType::sobel:
+            executeSobelBlur(input, output);
+            break;
+    }
+}
+void BandProcess::executeMeanBlur(Matrix& input,Matrix& output) const{
+    
+}
+void BandProcess::executeGaussianBlur(Matrix& input,Matrix& output) const{
+    
+}
+void BandProcess::executeLaplacianBlur(Matrix& input,Matrix& output) const{
+    
+}
+void BandProcess::executeSobelBlur(Matrix& input,Matrix& output) const{
+    
+}
+void TextureManager::processBand(unsigned short* RGB,std::shared_ptr<Spectum> band, int bias, const std::vector<BandProcess>& processes){
     const int width = band->width,height = band->height;
+    if (processes.empty()){
+        for (int y = 0; y < height; y++)
+            for (int x = 0; x < width; x++){
+                int loc = y * width + x;
+                if (toAverage)
+                    RGB[loc * 3 + bias] = band->average(y,x);
+                else
+                    RGB[loc * 3 + bias] = band->strech(y,x);
+            }
+        return;
+    }
+    std::vector<std::vector<unsigned short>> buffers[2];
+    for (int y = 0; y < height; y++){
+        std::vector<unsigned short> row1(width),row2(width);
+        for (int x = 0; x < width; x++){
+            row1[x] = band->rawData[y][x];
+            row2[x] = 0;
+        }
+        buffers[0].push_back(row1);
+        buffers[1].push_back(row2);
+    }
+    bool swapbuffer = false;
+    for (std::vector<BandProcess>::const_iterator process = processes.begin(); process != processes.end(); process++){
+        if (!swapbuffer)
+            process->execute(buffers[0],buffers[1]);
+        else
+            process->execute(buffers[1],buffers[0]);
+        swapbuffer = !swapbuffer;
+    }
     for (int y = 0; y < height; y++)
         for (int x = 0; x < width; x++){
             int loc = y * width + x;
-            if (toAverage)
-                RGB[loc * 3 + bias] = band->average(y,x);
+            if (!swapbuffer)
+                RGB[loc * 3 + bias] = buffers[1][y][x];
             else
-                RGB[loc * 3 + bias] = band->strech(y,x);
+                RGB[loc * 3 + bias] = buffers[0][y][x];
         }
 }
 std::string TextureManager::getStatus(){
@@ -480,7 +537,7 @@ void Image::showBandInfo(int bandindex){
 void Image::manageBands() {
     if (textureManager.pointIndex > 2){
         deleteTexture();
-        generateTexture();
+        generateTexture({});
         gui::toShowManageBand = false;
         return;
     }
@@ -512,7 +569,7 @@ void Image::manageBands() {
 void Image::averageBands(){
     textureManager.setToAverage(true);
     deleteTexture();
-    generateTexture();
+    generateTexture({});
 }
 void Image::strechBands(StrechLevel level,bool useGlobalRange) {
     SpectumRange globalRange{65535,0};
@@ -526,7 +583,7 @@ void Image::strechBands(StrechLevel level,bool useGlobalRange) {
             band->value->strechRange = globalRange;
     textureManager.setToAverage(false);
     deleteTexture();
-    generateTexture();
+    generateTexture({});
 }
 void Image::exportImage(std::string filePath){
     const int width = bands[0].value->width, height = bands[0].value->height;
@@ -587,15 +644,15 @@ void Image::draw() const{
     Primitive::draw();
     textureManager.draw();
 }
-void Image::generateTexture(){
+void Image::generateTexture(const std::vector<BandProcess>& processes){
     std::shared_ptr<Spectum> rval = bands[textureManager.RGBindex[0]].value;
     std::shared_ptr<Spectum> gval = bands[textureManager.RGBindex[1]].value;
     std::shared_ptr<Spectum> bval = bands[textureManager.RGBindex[2]].value;
     const int width = rval->width, height = rval->height;
     unsigned short *RGB = new unsigned short[width * height * 3];
-    textureManager.processBand(RGB,bval,0);
-    textureManager.processBand(RGB,gval,1);
-    textureManager.processBand(RGB,rval,2);
+    textureManager.processBand(RGB,bval,0,processes);
+    textureManager.processBand(RGB,gval,1,processes);
+    textureManager.processBand(RGB,rval,2,processes);
     GLuint textureID;
     glGenTextures(1, &textureID);
     glBindTexture(GL_TEXTURE_2D, textureID);
