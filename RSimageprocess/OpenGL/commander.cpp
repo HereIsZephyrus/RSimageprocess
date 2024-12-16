@@ -8,7 +8,7 @@
 #include "commander.hpp"
 #include "window.hpp"
 #include "../interface.hpp"
-#include "../unsupervise_classifier.hpp"
+#include "../classification/unsupervise_classifier.hpp"
 
 void BufferRecorder::initIO(GLFWwindow* window){
     memset(keyRecord, GL_FALSE, sizeof(keyRecord));
