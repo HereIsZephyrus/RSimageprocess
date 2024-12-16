@@ -132,6 +132,7 @@ public:
     BandProcess(BandProcessType processType,const std::map<std::string,float>& inputParas):
     type(processType),paras(inputParas){}
     void execute(Matrix& input,Matrix& output) const;
+    BandProcessType getType() const{return type;}
 };
 class TextureManager{
 using pTexture = std::shared_ptr<Texture>;

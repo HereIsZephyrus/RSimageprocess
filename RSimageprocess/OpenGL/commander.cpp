@@ -151,39 +151,54 @@ void Layer::strechBands() {
     }
 }
 void Layer::filterBands(){
-    static constexpr std::array<std::pair<BandProcessType,std::string>,4> methodList{
-        std::make_pair(BandProcessType::meanBlur,"均值滤波"),
-        std::make_pair(BandProcessType::gaussianBlur,"高斯滤波"),
-        std::make_pair(BandProcessType::laplacian,"Laplacian变换"),
-        std::make_pair(BandProcessType::sobel,"Sobel变换"),
+    using methodStrMap = std::unordered_map<BandProcessType,std::string>;
+    static const methodStrMap methodList{
+        {BandProcessType::meanBlur,"均值滤波"},
+        {BandProcessType::gaussianBlur,"高斯滤波"},
+        {BandProcessType::laplacian,"Laplacian变换"},
+        {BandProcessType::sobel,"Sobel变换"},
     };
-    ImGui::OpenPopup("Choose Strech Level");
+    ImGui::OpenPopup("Choose Filter Methods");
     ImVec2 pos = ImGui::GetMainViewport()->GetCenter();
     ImGui::SetNextWindowPos(pos);
-    if (ImGui::BeginPopup("Choose Strech Level")) {
+    BufferRecorder& buffer = BufferRecorder::getBuffer();
+    if (ImGui::BeginPopup("Choose Filter Methods")) {
         ImGui::PushFont(gui::chineseFont);
-        static int selectedItem = 0;
-        if (ImGui::BeginCombo("选择一种方式", methodList[selectedItem].second.c_str())) {
-            for (int i = 0; i < methodList.size(); ++i) {
-                bool isSelected = (selectedItem == i);
-                if (ImGui::Selectable(methodList[i].second.c_str(), isSelected))
-                    selectedItem = i;
+        static BandProcessType selectedAddItem = BandProcessType::meanBlur;
+        ImGui::BeginChild("##selectable table", ImVec2(150, 100), true);
+        ImGui::Text("<可选操作>");
+        for (methodStrMap::const_iterator method = methodList.begin(); method != methodList.end(); method++){
+            bool isSelected = (selectedAddItem == method->first);
+            if (ImGui::Selectable(method->second.c_str(),isSelected)) {
+                selectedAddItem = method->first;
                 if (isSelected)
                     ImGui::SetItemDefaultFocus();
             }
-            ImGui::EndCombo();
         }
-        if (ImGui::Button("确认")) {
-            std::vector<BandProcess> processes;
+        ImGui::EndChild();
+        ImGui::SameLine();
+        ImGui::BeginChild("##adding table", ImVec2(150, 100), true);
+        ImGui::Text("<待执行操作>");
+        for (std::vector<BandProcess>::iterator process = buffer.processes.begin(); process != buffer.processes.end(); process++){
+            ImGui::Text("%s",methodList.at(process->getType()).c_str());
+        }
+        ImGui::EndChild();
+        BufferRecorder& buffer = BufferRecorder::getBuffer();
+        if (ImGui::Button("添加")){
             std::map<std::string,float> para ={{"bandwidth",3}};
-            processes.push_back(BandProcess(methodList[selectedItem].first,para));
+            buffer.processes.push_back(BandProcess(selectedAddItem,para));
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("确认")) {
             raster->deleteTexture();
-            raster->generateTexture(processes);
+            raster->generateTexture(buffer.processes);
+            buffer.processes.clear();
             gui::toShowSpaceFilter = false;
             ImGui::CloseCurrentPopup();
         }
         ImGui::SameLine();
         if (ImGui::Button("取消")) {
+            buffer.processes.clear();
             gui::toShowSpaceFilter = false;
             ImGui::CloseCurrentPopup();
         }

@@ -96,6 +96,7 @@ public:
     void operator = (const BufferRecorder&) = delete;
     GLboolean keyRecord[GLFW_KEY_LAST+1],pressLeft,pressRight,pressCtrl,pressShift,pressAlt,doubleCliked;
     std::shared_ptr<Layer> selectedLayer;
+    std::vector<BandProcess> processes;
     void initIO(GLFWwindow* window);
 private:
     BufferRecorder(){}
