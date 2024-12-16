@@ -75,7 +75,7 @@ int initOpenGL(GLFWwindow *&window,std::string windowName) {
 namespace gui {
 ImFont *englishFont = nullptr,*chineseFont = nullptr;
 bool toImportImage = false,toImportROI = false;
-bool toShowStatistic = false,toShowManageBand = false,toShowStrechLevel = false;
+bool toShowStatistic = false,toShowManageBand = false,toShowStrechLevel = false,toShowSpaceFilter = false;
 int Initialization(GLFWwindow *window) {
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
@@ -118,6 +118,10 @@ bool DrawPopup(){
     }
     if (toShowStrechLevel){
         ChooseStrechLevel();
+        return true;
+    }
+    if (toShowSpaceFilter){
+        FilterBands();
         return true;
     }
     return false;
@@ -169,7 +173,7 @@ void RenderWorkspace(){
         }
         ImGui::SameLine();
         if (ImGui::Button("空间滤波",ButtonSize)){
-            
+            toShowSpaceFilter = true;
         }
     }
     style.FramePadding = ImVec2(4.0f, 2.0f);
@@ -215,5 +219,9 @@ void ManageBands(){
 void ChooseStrechLevel(){
     BufferRecorder& buffer = BufferRecorder::getBuffer();
     buffer.selectedLayer->strechBands();
+}
+void FilterBands(){
+    BufferRecorder& buffer = BufferRecorder::getBuffer();
+    buffer.selectedLayer->filterBands();
 }
 }

@@ -13,6 +13,7 @@
 #include "graphing.hpp"
 #include "window.hpp"
 #include "camera.hpp"
+#include "commander.hpp"
 
 std::map<std::string,pShader > ShaderBucket;
 GLchar* filePath(const char* fileName){
@@ -194,6 +195,8 @@ unsigned short Spectum::average(int y,int x){
 }
 unsigned short Spectum::strech(int y,int x){
     double streched = static_cast<double>(rawData[y][x] - strechRange.first) / (strechRange.second - strechRange.first) * (SPECT_VALUE_RANGE - 1);
+    if (streched < 0)                       return 0;
+    if (streched > SPECT_VALUE_RANGE - 1)   return SPECT_VALUE_RANGE - 1;
     return static_cast<unsigned short>(streched);
 }
 SpectumRange Spectum::setStrech(StrechLevel level){
@@ -340,8 +343,12 @@ void Primitive::update(){
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindVertexArray(0);
 }
-Texture::Texture(const std::vector<glm::vec3>& position, const std::vector<glm::vec2>& location, GLuint textureID):
-textureID(textureID),shape(GL_TRIANGLE_FAN),shader(ShaderBucket["image"].get()){
+Texture::Texture(const std::vector<glm::vec3>& position, const std::vector<glm::vec2>& location, GLuint textureID,bool useRGB):
+textureID(textureID),shape(GL_TRIANGLE_FAN){
+    if (useRGB)
+        shader = ShaderBucket["RGB"].get();
+    else
+        shader = ShaderBucket["Gray"].get();
     vertexNum = position.size();
     vertices = new GLfloat[vertexNum * stride];
     for (size_t i = 0; i < vertexNum; i++){
@@ -389,7 +396,159 @@ void Texture::draw() const {
     glBindVertexArray(0);
     return;
 }
-void TextureManager::processBand(unsigned short* RGB,std::shared_ptr<Spectum> band, int bias){
+std::string BandProcess::printParas(){
+    std::string paraStr = "bandwidth = " + std::to_string(static_cast<int>(paras.at("bandwidth")));
+    return paraStr;
+}
+void BandProcess::execute(Matrix& input,Matrix& output) const{
+    switch (type) {
+        case BandProcessType::meanBlur:
+            executeMeanBlur(input, output);
+            break;
+        case BandProcessType::gaussianBlur:
+            executeGaussianBlur(input, output);
+            break;
+        case BandProcessType::laplacian:
+            executeLaplacianBlur(input, output);
+            break;
+        case BandProcessType::sobel:
+            executeSobelBlur(input, output);
+            break;
+    }
+}
+void BandProcess::executeMeanBlur(Matrix& input,Matrix& output) const{
+    const int bandwidth = static_cast<int>(paras.at("bandwidth")), margin = bandwidth / 2;
+    const size_t width = input[0].size(),height = input.size();
+    for (size_t y = 0; y < height; y++) {
+        size_t ystart = 0, yterm = height - 1;
+        if (y >= margin) ystart = y - margin;
+        if (y < height - margin)   yterm = y + margin;
+        for (size_t x = 0; x < width; x++){
+            if (input[y][x] == 0)
+                continue;
+            size_t xstart = 0, xterm = width - 1;
+            if (x >= margin) xstart = x - margin;
+            if (x < height - margin)   xterm = x + margin;
+            double sum = 0;
+            int count = 0;
+            for (size_t i = ystart; i <= yterm; i++)
+                for (size_t j = xstart; j <= xterm; j++){
+                    sum += input[i][j];
+                    ++count;
+                }
+            output[y][x] = static_cast<double>(sum / count);
+        }
+    }
+}
+void BandProcess::executeGaussianBlur(Matrix& input,Matrix& output) const{
+    const int bandwidth = static_cast<int>(paras.at("bandwidth")), margin = bandwidth / 2;
+    const size_t width = input[0].size(),height = input.size();
+    std::vector<std::vector<double>> kernel(bandwidth,std::vector<double>(bandwidth,0));
+    double sum = 0;
+    for (int y = -margin; y <= margin; y++)
+        for (int x = -margin; x <= margin; x++){
+            double sqrSigma = static_cast<double>(bandwidth * bandwidth / 2);
+            double exponent = static_cast<double>(-(x * x + y * y)) / sqrSigma;
+            kernel[y + margin][x + margin] = exp(exponent) / (M_PI * sqrSigma);
+            sum += kernel[y + margin][x + margin];
+        }
+    for (int y = -margin; y <= margin; y++)
+        for (int x = -margin; x <= margin; x++)
+            kernel[y + margin][x + margin] /= sum;
+    for (size_t y = 0; y < height; y++) {
+        size_t ystart = 0, yterm = height - 1;
+        if (y >= margin) ystart = y - margin;
+        if (y < height - margin)   yterm = y + margin;
+        for (size_t x = 0; x < width; x++){
+            if (input[y][x] == 0)
+                continue;
+            size_t xstart = 0, xterm = width - 1;
+            if (x >= margin) xstart = x - margin;
+            if (x < height - margin)   xterm = x + margin;
+            double sum = 0.0;
+            for (size_t i = ystart; i <= yterm; i++)
+                for (size_t j = xstart; j <= xterm; j++)
+                    sum += input[i][j] * kernel[i - y + margin][j -x + margin];
+            output[y][x] = static_cast<unsigned short>(sum);
+        }
+    }
+}
+void BandProcess::executeLaplacianBlur(Matrix& input,Matrix& output) const{
+    const int bandwidth = static_cast<int>(paras.at("bandwidth")), margin = bandwidth / 2;
+    const size_t width = input[0].size(),height = input.size();
+    std::vector<std::vector<double>> kernel(bandwidth,std::vector<double>(bandwidth,0));
+    for (size_t y = 0; y < bandwidth; y++)
+        kernel[y][margin] = -1;
+    for (size_t x = 0; x < bandwidth; x++)
+        kernel[margin][x] = -1;
+    kernel[margin][margin] = 4 * margin;
+    for (size_t y = 0; y < height; y++) {
+        size_t ystart = 0, yterm = height - 1;
+        if (y >= margin) ystart = y - margin;
+        if (y < height - margin)   yterm = y + margin;
+        for (size_t x = 0; x < width; x++){
+            if (input[y][x] == 0)
+                continue;
+            size_t xstart = 0, xterm = width - 1;
+            if (x >= margin) xstart = x - margin;
+            if (x < height - margin)   xterm = x + margin;
+            double sum = 0.0;
+            for (size_t i = ystart; i <= yterm; i++){
+                for (size_t j = xstart; j <= xterm; j++){
+                    sum += input[i][j] * kernel[i - y + margin][j -x + margin];
+                    //std::cout<< input[i][j]<<' ';
+                }
+                //std::cout<<std::endl;
+            }
+            if (abs(sum) > SPECT_VALUE_RANGE - 1)
+                output[y][x] = SPECT_VALUE_RANGE - 1;
+            else
+                output[y][x] = static_cast<unsigned short>(abs(sum));
+        }
+    }
+}
+void BandProcess::executeSobelBlur(Matrix& input,Matrix& output) const{
+    const int bandwidth = static_cast<int>(paras.at("bandwidth")), margin = bandwidth / 2;
+    const size_t width = input[0].size(),height = input.size();
+    std::vector<std::vector<double>> kernelx(bandwidth,std::vector<double>(bandwidth,0)),kernely(bandwidth,std::vector<double>(bandwidth,0));
+    for (int i  = 0; i <= margin; i++){
+        for (int j = 0; j <= margin; j++){
+            kernelx[margin - i][margin - j] = (margin - i + 1) *(-j);
+            kernelx[margin - i][margin + j] = (margin - i + 1) *(j);
+            kernelx[margin + i][margin - j] = (margin - i + 1) *(-j);
+            kernelx[margin + i][margin + j] = (margin - i + 1) *(j);
+            
+            kernely[margin - i][margin - j] = (margin - j + 1) *(-i);
+            kernely[margin - i][margin + j] = (margin - j + 1) *(-i);
+            kernely[margin + i][margin - j] = (margin - j + 1) *(i);
+            kernely[margin + i][margin + j] = (margin - j + 1) *(i);
+        }
+    }
+    for (size_t y = 0; y < height; y++) {
+        size_t ystart = 0, yterm = height - 1;
+        if (y >= margin) ystart = y - margin;
+        if (y < height - margin)   yterm = y + margin;
+        for (size_t x = 0; x < width; x++){
+            if (input[y][x] == 0)
+                continue;
+            size_t xstart = 0, xterm = width - 1;
+            if (x >= margin) xstart = x - margin;
+            if (x < height - margin)   xterm = x + margin;
+            double sumX = 0.0, sumY = 0.0;
+            for (size_t i = ystart; i <= yterm; i++)
+                for (size_t j = xstart; j <= xterm; j++){
+                    sumX += input[i][j] * kernelx[i - y + margin][j -x + margin];
+                    sumY += input[i][j] * kernely[i - y + margin][j -x + margin];
+                }
+            double gredient = std::sqrt(sumX * sumX + sumY * sumY);
+            if (gredient > SPECT_VALUE_RANGE - 1)
+                output[y][x] = SPECT_VALUE_RANGE - 1;
+            else
+                output[y][x] = gredient;
+        }
+    }
+}
+void TextureManager::processBand(unsigned short* RGB,std::shared_ptr<Spectum> band, int bias, const std::vector<BandProcess>& processes){
     const int width = band->width,height = band->height;
     for (int y = 0; y < height; y++)
         for (int x = 0; x < width; x++){
@@ -399,11 +558,90 @@ void TextureManager::processBand(unsigned short* RGB,std::shared_ptr<Spectum> ba
             else
                 RGB[loc * 3 + bias] = band->strech(y,x);
         }
+    if (processes.empty())
+        return;
+    std::vector<std::vector<unsigned short>> buffers[2];
+    for (int y = 0; y < height; y++){
+        std::vector<unsigned short> row1(width),row2(width);
+        for (int x = 0; x < width; x++){
+            int loc = y * width + x;
+            row1[x] = RGB[loc * 3 + bias];
+            row2[x] = 0;
+        }
+        buffers[0].push_back(row1);
+        buffers[1].push_back(row2);
+    }
+    bool swapbuffer = false;
+    for (std::vector<BandProcess>::const_iterator process = processes.begin(); process != processes.end(); process++){
+        if (!swapbuffer)
+            process->execute(buffers[0],buffers[1]);
+        else
+            process->execute(buffers[1],buffers[0]);
+        swapbuffer = !swapbuffer;
+    }
+    for (int y = 0; y < height; y++)
+        for (int x = 0; x < width; x++){
+            int loc = y * width + x;
+            if (swapbuffer)
+                RGB[loc * 3 + bias] = buffers[1][y][x];
+            else
+                RGB[loc * 3 + bias] = buffers[0][y][x];
+        }
+}
+void TextureManager::processBand(unsigned short* Gray,std::shared_ptr<Spectum> band, const std::vector<BandProcess>& processes){
+    const int width = band->width,height = band->height;
+    for (int y = 0; y < height; y++)
+        for (int x = 0; x < width; x++){
+            int loc = y * width + x;
+            if (toAverage)
+                Gray[loc] = band->average(y,x);
+            else
+                Gray[loc] = band->strech(y,x);
+        }
+    if (processes.empty())
+        return;
+    std::vector<std::vector<unsigned short>> buffers[2];
+    for (int y = 0; y < height; y++){
+        std::vector<unsigned short> row1(width),row2(width);
+        for (int x = 0; x < width; x++){
+            int loc = y * width + x;
+            row1[x] = Gray[loc];
+            row2[x] = 0;
+        }
+        buffers[0].push_back(row1);
+        buffers[1].push_back(row2);
+    }
+    bool swapbuffer = false;
+    for (std::vector<BandProcess>::const_iterator process = processes.begin(); process != processes.end(); process++){
+        if (!swapbuffer)
+            process->execute(buffers[0],buffers[1]);
+        else
+            process->execute(buffers[1],buffers[0]);
+        swapbuffer = !swapbuffer;
+    }
+    for (int y = 0; y < height; y++)
+        for (int x = 0; x < width; x++){
+            int loc = y * width + x;
+            if (swapbuffer)
+                Gray[loc] = buffers[1][y][x];
+            else
+                Gray[loc] = buffers[0][y][x];
+        }
 }
 std::string TextureManager::getStatus(){
     std::string status = "_" + std::to_string(RGBindex[0]) + std::to_string(RGBindex[1]) + std::to_string(RGBindex[2]);
     if (toAverage)
         status += "_aver";
+    static const std::unordered_map<BandProcessType,std::string> methodList{
+        {BandProcessType::meanBlur,"_meanBlur"},
+        {BandProcessType::gaussianBlur,"_gaussianBlur"},
+        {BandProcessType::laplacian,"_Laplacian"},
+        {BandProcessType::sobel,"_Sobel"},
+    };
+    const std::vector<BandProcess>& processes = BufferRecorder::getBuffer().processes;
+    for (std::vector<BandProcess>::const_iterator process = processes.begin(); process != processes.end(); process++){
+        status += methodList.at(process->getType());
+    }
     return status;
 }
 double Image::calcCoefficent(size_t bandind1,size_t bandind2){
@@ -476,19 +714,17 @@ void Image::showBandInfo(int bandindex){
     ImGui::PlotHistogram("##直方图数据", bands[bandindex].value->hist.data(), static_cast<int>(bands[bandindex].value->hist.size()), 0, nullptr, 0.0f, bands[bandindex].value->HistHeight, ImVec2(0, 150));
 }
 void Image::manageBands() {
-    if (textureManager.pointIndex > 2){
-        deleteTexture();
-        generateTexture();
-        gui::toShowManageBand = false;
-        return;
-    }
     static constexpr std::array<std::string,3> colormap = {"red","green","blue"};
     ImGui::OpenPopup("Manage Bands");
     ImVec2 pos = ImGui::GetMainViewport()->GetCenter();
     ImGui::SetNextWindowPos(pos);
     if (ImGui::BeginPopup("Manage Bands")) {
-        std::string selectInfo = "Select the " + colormap[textureManager.pointIndex] + " band:";
-        ImGui::Text("%s", selectInfo.c_str());
+        if (textureManager.pointIndex < textureManager.bandNum[textureManager.useRGB]){
+            std::string selectInfo = "Select the " + colormap[textureManager.pointIndex] + " band:";
+            if (textureManager.useRGB == false)
+                selectInfo = "Select view band:";
+            ImGui::Text("%s", selectInfo.c_str());
+        }
         int counter = 0;
         std::vector<std::string> bandStrVec;
         for (std::vector<Band>::const_reverse_iterator band = bands.rbegin(); band != bands.rend(); band++){
@@ -500,17 +736,44 @@ void Image::manageBands() {
         for (std::vector<std::string>::const_iterator bandStr = bandStrVec.begin(); bandStr != bandStrVec.end(); bandStr++)
             bandCharVec.push_back(bandStr->c_str());
         int selectedItem = -1;
-        if (ImGui::ListBox("##loaded bands", &selectedItem, bandCharVec.data(), static_cast<int>(bandCharVec.size()), 7)){
-            textureManager.RGBindex[textureManager.pointIndex] = selectedItem;
+        if (ImGui::ListBox("##loaded bands", &selectedItem, bandCharVec.data(), static_cast<int>(bandCharVec.size()), 7) && textureManager.pointIndex < textureManager.bandNum[textureManager.useRGB]){
+            if (textureManager.useRGB)
+                textureManager.RGBindex[textureManager.pointIndex] = selectedItem;
+            else
+                textureManager.grayIndex = selectedItem;
             ++textureManager.pointIndex;
         }
+        ImGui::PushFont(gui::chineseFont);
+        static constexpr std::array<std::string, 2> imgeTypeStr{"灰度图像","RGB合成"};
+        if (ImGui::BeginCombo("加载类型", imgeTypeStr[textureManager.useRGB].c_str())) {
+            for (int i = 0; i < imgeTypeStr.size(); i++) {
+                bool isSelected = (selectedItem == i);
+                if (ImGui::Selectable(imgeTypeStr[i].c_str(), isSelected)){
+                    if (textureManager.useRGB != i){
+                        textureManager.pointIndex = 0;
+                        textureManager.useRGB = i;
+                    }
+                }
+                if (isSelected)
+                    ImGui::SetItemDefaultFocus();
+            }
+            ImGui::EndCombo();
+        }
+        if (textureManager.pointIndex >= textureManager.bandNum[textureManager.useRGB]){
+            if (ImGui::Button("确认")) {
+                deleteTexture();
+                generateTexture({});
+                gui::toShowManageBand = false;
+            }
+        }
+        ImGui::PopFont();
         ImGui::EndPopup();
     }
 }
 void Image::averageBands(){
     textureManager.setToAverage(true);
     deleteTexture();
-    generateTexture();
+    generateTexture({});
 }
 void Image::strechBands(StrechLevel level,bool useGlobalRange) {
     SpectumRange globalRange{65535,0};
@@ -524,9 +787,15 @@ void Image::strechBands(StrechLevel level,bool useGlobalRange) {
             band->value->strechRange = globalRange;
     textureManager.setToAverage(false);
     deleteTexture();
-    generateTexture();
+    generateTexture({});
 }
 void Image::exportImage(std::string filePath){
+    if (textureManager.useRGB)
+        exportRGBImage(filePath);
+    else
+        exportGrayImage(filePath);
+}
+void Image::exportRGBImage(std::string filePath){
     const int width = bands[0].value->width, height = bands[0].value->height;
     cv::Mat rChannel = cv::Mat::zeros(height, width, CV_8UC1);
     cv::Mat gChannel = cv::Mat::zeros(height, width, CV_8UC1);
@@ -534,30 +803,51 @@ void Image::exportImage(std::string filePath){
     std::shared_ptr<Spectum> rval = bands[textureManager.RGBindex[0]].value;
     std::shared_ptr<Spectum> gval = bands[textureManager.RGBindex[1]].value;
     std::shared_ptr<Spectum> bval = bands[textureManager.RGBindex[2]].value;
+    unsigned short *RGB = new unsigned short[width * height * 3];
+    const std::vector<BandProcess>& processes = BufferRecorder::getBuffer().processes;
+    textureManager.processBand(RGB,bval,0,processes);
+    textureManager.processBand(RGB,gval,1,processes);
+    textureManager.processBand(RGB,rval,2,processes);
     for (int y = 0; y < height; y++)
         for (int x = 0; x < width; x++){
-            if (textureManager.getToAverage()){
-                rChannel.at<uchar>(y,x) = static_cast<uchar>(static_cast<float>(rval->average(y, x)) * 255 / 65535);
-                gChannel.at<uchar>(y,x) = static_cast<uchar>(static_cast<float>(gval->average(y, x)) * 255 / 65535);
-                bChannel.at<uchar>(y,x) = static_cast<uchar>(static_cast<float>(bval->average(y, x)) * 255 / 65535);
-            }
-            else{
-                rChannel.at<uchar>(y,x) = static_cast<uchar>(static_cast<float>(rval->strech(y, x)) * 255 / 65535);
-                gChannel.at<uchar>(y,x) = static_cast<uchar>(static_cast<float>(gval->strech(y, x)) * 255 / 65535);
-                bChannel.at<uchar>(y,x) = static_cast<uchar>(static_cast<float>(bval->strech(y, x)) * 255 / 65535);
-            }
+            int loc = y * width + x;
+            rChannel.at<uchar>(y,x) = static_cast<uchar>(static_cast<float>(RGB[loc * 3 + 0]) * 255 / 65535);
+            gChannel.at<uchar>(y,x) = static_cast<uchar>(static_cast<float>(RGB[loc * 3 + 1]) * 255 / 65535);
+            bChannel.at<uchar>(y,x) = static_cast<uchar>(static_cast<float>(RGB[loc * 3 + 2]) * 255 / 65535);
         }
+    delete[] RGB;
     cv::Mat rgbImage;
     std::vector<cv::Mat> channels = {rChannel, gChannel, bChannel};
     cv::merge(channels, rgbImage);
     cv::imwrite(filePath.c_str(), rgbImage);
-
 }
-std::string Image::getIndicator(int index){
+void Image::exportGrayImage(std::string filePath){
+    const int width = bands[0].value->width, height = bands[0].value->height;
+    cv::Mat image = cv::Mat::zeros(height, width, CV_8UC1);
+    std::shared_ptr<Spectum> val = bands[textureManager.grayIndex].value;
+    unsigned short *Gray = new unsigned short[width * height];
+    const std::vector<BandProcess>& processes = BufferRecorder::getBuffer().processes;
+    textureManager.processBand(Gray,val,processes);
+    for (int y = 0; y < height; y++)
+        for (int x = 0; x < width; x++){
+            if (textureManager.getToAverage())
+                image.at<uchar>(y,x) = static_cast<uchar>(static_cast<float>(Gray[y * width + x]) * 255 / 65535);
+            else
+                image.at<uchar>(y,x) = static_cast<uchar>(static_cast<float>(Gray[y * width + x]) * 255 / 65535);
+        }
+    cv::imwrite(filePath.c_str(), image);
+}
+std::string TextureManager::getIndicator(int index){
     std::string indicator = "";
-    if (textureManager.RGBindex[0] == index)    return "(R)";
-    if (textureManager.RGBindex[1] == index)    return "(G)";
-    if (textureManager.RGBindex[2] == index)    return "(B)";
+    if (pointIndex < bandNum[useRGB])
+        return indicator;
+    if (useRGB){
+        if (RGBindex[0] == index)    return "(R)";
+        if (RGBindex[1] == index)    return "(G)";
+        if (RGBindex[2] == index)    return "(B)";
+    }else{
+        if (grayIndex == index) return"(S)";
+    }
     return indicator;
 }
 void Image::LoadNewBand(std::string searchingPath,std::string spectum){
@@ -585,15 +875,8 @@ void Image::draw() const{
     Primitive::draw();
     textureManager.draw();
 }
-void Image::generateTexture(){
-    std::shared_ptr<Spectum> rval = bands[textureManager.RGBindex[0]].value;
-    std::shared_ptr<Spectum> gval = bands[textureManager.RGBindex[1]].value;
-    std::shared_ptr<Spectum> bval = bands[textureManager.RGBindex[2]].value;
-    const int width = rval->width, height = rval->height;
-    unsigned short *RGB = new unsigned short[width * height * 3];
-    textureManager.processBand(RGB,bval,0);
-    textureManager.processBand(RGB,gval,1);
-    textureManager.processBand(RGB,rval,2);
+void Image::generateTexture(const std::vector<BandProcess>& processes){
+    const int width = bands[0].value->width, height = bands[0].value->height;
     GLuint textureID;
     glGenTextures(1, &textureID);
     glBindTexture(GL_TEXTURE_2D, textureID);
@@ -601,17 +884,32 @@ void Image::generateTexture(){
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16, width, height, 0, GL_RGB, GL_UNSIGNED_SHORT, RGB);
+    if (textureManager.useRGB){
+        std::shared_ptr<Spectum> rval = bands[textureManager.RGBindex[0]].value;
+        std::shared_ptr<Spectum> gval = bands[textureManager.RGBindex[1]].value;
+        std::shared_ptr<Spectum> bval = bands[textureManager.RGBindex[2]].value;
+        unsigned short *RGB = new unsigned short[width * height * 3];
+        textureManager.processBand(RGB,bval,0,processes);
+        textureManager.processBand(RGB,gval,1,processes);
+        textureManager.processBand(RGB,rval,2,processes);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16, width, height, 0, GL_RGB, GL_UNSIGNED_SHORT, RGB);
+        delete[] RGB;
+    }else{
+        std::shared_ptr<Spectum> val = bands[textureManager.grayIndex].value;
+        unsigned short *Gray = new unsigned short[width * height];
+        textureManager.processBand(Gray,val,processes);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_R16, width, height, 0, GL_RED, GL_UNSIGNED_SHORT, Gray);
+        delete[] Gray;
+    }
     glGenerateMipmap(GL_TEXTURE_2D);
     std::vector<glm::vec3> position;
     std::vector<glm::vec2> texturePos;
     for (int index = 0; index < vertexNum ; index++){
         position.push_back(glm::vec3(vertices[index * stride],vertices[index * stride + 1],vertices[index * stride + 2]));
-        texturePos.push_back(rval->validRange[index]);
+        texturePos.push_back(bands[0].value->validRange[index]);
     }
-    std::shared_ptr<Texture> texture = std::make_shared<Texture>(position,texturePos,textureID);
+    std::shared_ptr<Texture> texture = std::make_shared<Texture>(position,texturePos,textureID,textureManager.useRGB);
     textureManager.createtexture(texture);
-    delete[] RGB;
     glBindTexture(GL_TEXTURE_2D, 0);
 }
 ROI::ROI(const std::vector<Vertex>& inputVertex):Primitive(inputVertex,GL_LINE_LOOP,ShaderBucket["line"].get()){
@@ -660,8 +958,15 @@ void InitResource(GLFWwindow *window){
     {
         pShader image (new Shader());
         image->attchShader(filePath("texture_vertices.vs"),GL_VERTEX_SHADER);
-        image->attchShader(filePath("texture.frag"),GL_FRAGMENT_SHADER);
+        image->attchShader(filePath("texture_RGB.frag"),GL_FRAGMENT_SHADER);
         image->linkProgram();
-        ShaderBucket["image"] = std::move(image);
+        ShaderBucket["RGB"] = std::move(image);
+    }
+    {
+        pShader image (new Shader());
+        image->attchShader(filePath("texture_vertices.vs"),GL_VERTEX_SHADER);
+        image->attchShader(filePath("texture_Gray.frag"),GL_FRAGMENT_SHADER);
+        image->linkProgram();
+        ShaderBucket["Gray"] = std::move(image);
     }
 }
