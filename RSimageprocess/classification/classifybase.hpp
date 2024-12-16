@@ -39,10 +39,12 @@ public:
     glm::vec3 getColor(int label) const {return colorMap[label];}
     int getTotalNum() const {return totalNum;}
     static constexpr glm::vec3 blankColor = {0,0,0};
-private:
-    int totalNum;
+    void generateRandomColorMap(int num);
+    void setTotalNum(int num){totalNum = num;}
     std::vector<std::string> nameMap;
     std::vector<glm::vec3> colorMap;
+private:
+    int totalNum;
     ClassMapper(){}
 };
 using dataVec = std::vector<float>;

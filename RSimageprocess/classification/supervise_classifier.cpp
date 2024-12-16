@@ -290,7 +290,6 @@ void BPClassifier::initWeights(){
     deltaWeightsHidden2Output.assign(hiddenSize+1,dataVec(classNum,0));
     double rangeHidden = 1/sqrt((double)this->featureNum);
     double rangeOutput = 1/sqrt((double)hiddenSize);
-    srand((unsigned int)time(NULL));
     for (int i = 0; i <= this->featureNum; i++)
         for (int j = 0; j < hiddenSize; j++)
             weightsInput2Hidden[i][j] = (((double)(rand() % 100 + 1))/100.0) * 2.0 * rangeHidden - rangeHidden;
@@ -477,7 +476,6 @@ std::shared_ptr<RandomForestClassifier::DecisionTree::Node> RandomForestClassifi
             constructNode(dataset,leftIndex,depth+1),constructNode(dataset,rightIndex,depth+1));
 }
 void RandomForestClassifier::DecisionTree::train(const std::vector<Sample> &dataset){
-    srand((unsigned int)time(NULL));
     std::vector<int> dataIndex;
     for (size_t i = 0; i < dataset.size(); i++)
         if (dataset[i].isTrainSample())

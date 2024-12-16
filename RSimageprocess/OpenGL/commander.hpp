@@ -22,6 +22,16 @@
 #include "graphing.hpp"
 #include "camera.hpp"
 #include "../interface.hpp"
+
+enum class ClassifierType{
+    naiveBayes,
+    fisher,
+    svm,
+    bp,
+    rf,
+    isodata,
+    kmean,
+};
 class LayerManager;
 class Layer{
     std::unique_ptr<Image> raster;
@@ -60,6 +70,7 @@ public:
     void unsupervised();
     void supervised();
     void resetBandIndex(){raster->resetIndex();}
+    void ClassifyImage(ClassifierType classifierType);
 };
 class LayerManager{
     using pLayer = std::shared_ptr<Layer>;

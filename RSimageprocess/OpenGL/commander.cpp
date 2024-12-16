@@ -8,7 +8,9 @@
 #include "commander.hpp"
 #include "window.hpp"
 #include "../interface.hpp"
+#include "../classification/classifybase.hpp"
 #include "../classification/unsupervise_classifier.hpp"
+#include "../classification/supervise_classifier.hpp"
 
 void BufferRecorder::initIO(GLFWwindow* window){
     memset(keyRecord, GL_FALSE, sizeof(keyRecord));
@@ -230,16 +232,67 @@ void Layer::filterBands(){
     }
 }
 void Layer::unsupervised(){
-    using methodStrMap = std::unordered_map<UnsuperviseClassifierType,std::string>;
+    using methodStrMap = std::unordered_map<ClassifierType,std::string>;
     static const methodStrMap methodList{
-        {UnsuperviseClassifierType::isodata,"ISODATA"},
-        {UnsuperviseClassifierType::kmean,"K-mean"},
+        {ClassifierType::isodata,"ISODATA"},
+        {ClassifierType::kmean,"K-mean"},
     };
     ImGui::OpenPopup("Unsupervised");
     ImVec2 pos = ImGui::GetMainViewport()->GetCenter();
     ImGui::SetNextWindowPos(pos);
-    static UnsuperviseClassifierType selectedItem = UnsuperviseClassifierType::isodata;
+    static ClassifierType selectedItem = ClassifierType::isodata;
     if (ImGui::BeginPopup("Unsupervised")){
+        ImGui::PushFont(gui::chineseFont);
+        if (ImGui::BeginCombo("选择一种方式", methodList.at(selectedItem).c_str())) {
+            for (methodStrMap::const_iterator method = methodList.begin(); method != methodList.end(); method++){
+                bool isSelected = (selectedItem == method->first);
+                if (ImGui::Selectable(method->second.c_str(), isSelected))
+                    selectedItem = method->first;
+                if (isSelected)
+                    ImGui::SetItemDefaultFocus();
+            }
+            ImGui::EndCombo();
+        }
+        static char inputBuffer[10] = "";
+        ImGui::Text("分类数量:");
+        ImGui::SameLine();
+        ImGui::PushItemWidth(40);
+        ImGui::InputText("##input", inputBuffer, sizeof(inputBuffer),ImGuiInputTextFlags_CharsDecimal);
+        ImGui::PopItemWidth();
+        ClassMapper& classMapper = ClassMapper::getClassMap();
+        int currentNum = std::stoi(inputBuffer);
+        if (currentNum > 1)
+            classMapper.setTotalNum(currentNum);
+        if (ImGui::Button("确认")) {
+            inputBuffer[0] = '\0';
+            ClassifyImage(selectedItem);
+            gui::toShowUnsupervised = false;
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("取消")) {
+            inputBuffer[0] = '\0';
+            gui::toShowUnsupervised = false;
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::PopFont();
+        ImGui::EndPopup();
+    }
+}
+void Layer::supervised(){
+    using methodStrMap = std::unordered_map<ClassifierType,std::string>;
+    static const methodStrMap methodList{
+        {ClassifierType::naiveBayes,"朴素Bayes"},
+        {ClassifierType::fisher,"Fisher"},
+        {ClassifierType::svm,"SVM"},
+        {ClassifierType::bp,"BP"},
+        {ClassifierType::rf,"RF"},
+    };
+    ImGui::OpenPopup("Supervised");
+    ImVec2 pos = ImGui::GetMainViewport()->GetCenter();
+    ImGui::SetNextWindowPos(pos);
+    static ClassifierType selectedItem = ClassifierType::rf;
+    if (ImGui::BeginPopup("Supervised")){
         ImGui::PushFont(gui::chineseFont);
         if (ImGui::BeginCombo("选择一种方式", methodList.at(selectedItem).c_str())) {
             for (methodStrMap::const_iterator method = methodList.begin(); method != methodList.end(); method++){
@@ -259,6 +312,7 @@ void Layer::unsupervised(){
         ImGui::PopItemWidth();
         if (ImGui::Button("确认")) {
             inputBuffer[0] = '\0';
+            ClassifyImage(selectedItem);
             gui::toShowUnsupervised = false;
             ImGui::CloseCurrentPopup();
         }
@@ -272,22 +326,44 @@ void Layer::unsupervised(){
         ImGui::EndPopup();
     }
 }
-void Layer::supervised(){
-    ImGui::OpenPopup("Supervised");
-    ImVec2 pos = ImGui::GetMainViewport()->GetCenter();
-    ImGui::SetNextWindowPos(pos);
-    if (ImGui::BeginPopup("Supervised")){
-        if (ImGui::Button("确认")) {
-            gui::toShowSupervised = false;
-            ImGui::CloseCurrentPopup();
-        }
-        ImGui::SameLine();
-        if (ImGui::Button("取消")) {
-            gui::toShowSupervised = false;
-            ImGui::CloseCurrentPopup();
-        }
-        ImGui::EndPopup();
+void Layer::ClassifyImage(ClassifierType classifierType){
+    unsigned char* classified = nullptr;
+    ClassMapper& classMapper = ClassMapper::getClassMap();
+    if (classifierType == ClassifierType::isodata){
+        ISODATA solver(classMapper.getTotalNum());
+        solver.Classify(raster->getBands(), raster->getToAverage(), classified);
     }
+    else if (classifierType == ClassifierType::kmean){;
+    }else{
+        std::shared_ptr<Classifier> classifier = nullptr;
+        switch (classifierType) {
+            case ClassifierType::naiveBayes:
+                classifier = std::make_shared<NaiveBayesClassifier>();
+                break;
+            case ClassifierType::fisher:
+                classifier = std::make_shared<FisherClassifier>();
+                break;
+            case ClassifierType::svm:
+                classifier = std::make_shared<SVMClassifier>();
+                break;
+            case ClassifierType::bp:
+                classifier = std::make_shared<BPClassifier>();
+                break;
+            case ClassifierType::rf:
+                classifier = std::make_shared<RandomForestClassifier>();
+                break;
+            default:
+                break;
+        }
+        if (classifier == nullptr)
+            return;
+        //classifier->Train(<#const Dataset &dataset#>);
+        //classifier->Classify(<#const std::vector<Band> &bands#>, classified);
+        //classifier->Examine(<#const Dataset &samples#>);
+    }
+    raster->deleteTexture();
+    raster->generateClassifiedTexture(classified);
+    delete [] classified;
 }
 void LayerManager::addLayer(pLayer newLayer) {
     if (head == nullptr) {

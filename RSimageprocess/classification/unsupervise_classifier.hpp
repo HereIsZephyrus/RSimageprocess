@@ -11,11 +11,6 @@
 #include "../OpenGL/graphing.hpp"
 #include "classifybase.hpp"
 
-enum class UnsuperviseClassifierType{
-    isodata,
-    kmean
-};
-
 class ISODATA{
     double epsilon,splitThreshold;
     int maxIter,minSamples,clusterNum;
@@ -29,6 +24,6 @@ class ISODATA{
     dataVec calculateVariance(const std::vector<dataVec>& data, const std::vector<int>& labels, const std::vector<dataVec>& centers, int numClusters);
 public:
     ISODATA(int INIT_CLUSTER_NUM,int MAX_ITER = 10,int MIN_SAMPLES = 5,double EPSILON = 1e-6,double SPLIT_THRESHOLD = 1.0);
-    void Classify(std::vector<Band>& bands, bool toAverage, unsigned char* classified);
+    void Classify(const std::vector<Band>& bands, bool toAverage, unsigned char* classified);
 };
 #endif /* unsupervise_classifier_hpp */

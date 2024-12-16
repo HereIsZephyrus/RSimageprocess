@@ -10,6 +10,26 @@
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
 #include "../OpenGL/window.hpp"
+#include "../OpenGL/commander.hpp"
+
+void ClassMapper::generateRandomColorMap(int num){
+    totalNum = num;
+    for (int i = 0; i < num; i++){
+        std::string name = "class " + std::to_string(i + 1);
+        nameMap.push_back(name.c_str());
+    }
+    for (int i = 0; i < num; i++){
+        float r = static_cast<float>(rand() % 100) / 100;
+        float g = static_cast<float>(rand() % 100) / 100;
+        float b = static_cast<float>(rand() % 100) / 100;
+        colorMap.push_back(glm::vec3(r,g,b));
+    }
+    //ImGui::ColorEdit3(std::string("##Color" + nameMap[0]).c_str(), (float*)&colorMap[0]);
+    //for (int i = 1; i < num; i++){
+    //    ImGui::SameLine();
+    //    ImGui::ColorEdit3(std::string("##Color" + nameMap[i]).c_str(), (float*)&colorMap[i]);
+    //}
+}
 float Accuracy::getComprehensiveAccuracy(){
     float accuracy = 0.0f;
     for (std::vector<float>::const_iterator it = f1.begin(); it != f1.end(); it++)

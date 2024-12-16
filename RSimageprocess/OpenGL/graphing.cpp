@@ -912,6 +912,28 @@ void Image::generateTexture(const std::vector<BandProcess>& processes){
     textureManager.createtexture(texture);
     glBindTexture(GL_TEXTURE_2D, 0);
 }
+void Image::generateClassifiedTexture(unsigned char *classified){
+    const int width = bands[0].value->width, height = bands[0].value->height;
+    GLuint textureID;
+    glGenTextures(1, &textureID);
+    glBindTexture(GL_TEXTURE_2D, textureID);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, width, height, 0, GL_RGB, GL_UNSIGNED_SHORT, classified);
+    delete[] classified;
+    glGenerateMipmap(GL_TEXTURE_2D);
+    std::vector<glm::vec3> position;
+    std::vector<glm::vec2> texturePos;
+    for (int index = 0; index < vertexNum ; index++){
+        position.push_back(glm::vec3(vertices[index * stride],vertices[index * stride + 1],vertices[index * stride + 2]));
+        texturePos.push_back(bands[0].value->validRange[index]);
+    }
+    std::shared_ptr<Texture> texture = std::make_shared<Texture>(position,texturePos,textureID,textureManager.useRGB);
+    textureManager.createtexture(texture);
+    glBindTexture(GL_TEXTURE_2D, 0);
+}
 ROI::ROI(const std::vector<Vertex>& inputVertex):Primitive(inputVertex,GL_LINE_LOOP,ShaderBucket["line"].get()){
     startPosition = inputVertex[0].position;
     

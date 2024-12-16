@@ -9,7 +9,7 @@ struct BasicBayesParaList{
 class NaiveBayesClassifier : public Classifier{
 protected:
     std::vector<BasicBayesParaList> para;
-    virtual bool CalcClassProb(float* prob) = 0;
+    bool CalcClassProb(float* prob) {return true;}
     double CalculateClassProbability(unsigned int classID,const dataVec& x);
     void trainBayes(const Dataset& dataset,const float* classProbs);
 public:
@@ -118,7 +118,7 @@ protected:
     int maxDepth,minSamplesSplit,minSamplesLeaf;
     void Bootstrapping(const Dataset& rawdataset, Dataset& bootstrapped);
 public:
-    RandomForestClassifier(int nEstimators,int maxDepth, int minSamplesSplit, int minSamplesLeaf, int eachTreeSamplesNum)
+    RandomForestClassifier(int nEstimators = 50,int maxDepth = 40, int minSamplesSplit = 2, int minSamplesLeaf = 1, int eachTreeSamplesNum = 250)
      : nEstimators(nEstimators),maxDepth(maxDepth),eachTreeSamplesNum(eachTreeSamplesNum),
         minSamplesSplit(minSamplesSplit),minSamplesLeaf(minSamplesLeaf) {
         decisionTrees.reserve(nEstimators);

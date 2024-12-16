@@ -188,6 +188,7 @@ public:
     void draw() const override;
     const std::vector<Band>& getBands(){return bands;}
     void generateTexture(const std::vector<BandProcess>& processes);
+    void generateClassifiedTexture(unsigned char* classified);
     void deleteTexture() {textureManager.deleteTexture();}
     void exportImage(std::string filePath);
     void manageBands();
@@ -198,6 +199,7 @@ public:
     void showBandCoefficient();
     std::string getTextureStatus(){return textureManager.getStatus();}
     std::string getIndicator(int index){return textureManager.getIndicator(index);}
+    bool getToAverage() const {return textureManager.getToAverage();}
 };
 class ROI : public Primitive{
     glm::vec3 startPosition;

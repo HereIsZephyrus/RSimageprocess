@@ -53,7 +53,7 @@ ISODATA::ISODATA(int INIT_CLUSTER_NUM,int MAX_ITER,int MIN_SAMPLES,double EPSILO
 clusterNum(INIT_CLUSTER_NUM),maxIter(MAX_ITER),minSamples(MIN_SAMPLES),epsilon(EPSILON),splitThreshold(SPLIT_THRESHOLD),bandsPtr(nullptr){
     this->classifierName = "ISODATA";
 }
-void ISODATA::Classify(std::vector<Band>& bands, bool toAverage, unsigned char* classified) {
+void ISODATA::Classify(const std::vector<Band>& bands, bool toAverage, unsigned char* classified) {
     ClassMapper& classMapper = ClassMapper::getClassMap();
     featureNum = bands.size();
     const int classNum = classMapper.getTotalNum();
@@ -78,7 +78,6 @@ void ISODATA::Classify(std::vector<Band>& bands, bool toAverage, unsigned char* 
             data.push_back(feature);
         }
     const int n = static_cast<int>(data.size());
-    srand((unsigned int)time(NULL));
     for (int k = 0; k < clusterNum; k++)
         centers[k] = data[rand() % n];
 
@@ -127,5 +126,19 @@ void ISODATA::Classify(std::vector<Band>& bands, bool toAverage, unsigned char* 
         }
     }
     clusterNum = currentClusters;
+    classMapper.generateRandomColorMap(clusterNum);
+    int count = 0;
+    for (int y = 0; y < height; y++)
+        for (int x = 0; x < width; x++){
+            int loc = y * width + x;
+            glm::vec3 useColor;
+            if (bands[0].value->rawData[y][x] == 0)
+                useColor = classMapper.blankColor;
+            else
+                useColor = classMapper.colorMap[labels[count++]];
+            classified[loc * 3 + 0] = useColor.r * 255;
+            classified[loc * 3 + 0] = useColor.g * 255;
+            classified[loc * 3 + 0] = useColor.b * 255;
+        }
 }
 
