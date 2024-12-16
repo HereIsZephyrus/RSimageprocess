@@ -260,9 +260,8 @@ void Layer::unsupervised(){
         ImGui::InputText("##input", inputBuffer, sizeof(inputBuffer),ImGuiInputTextFlags_CharsDecimal);
         ImGui::PopItemWidth();
         ClassMapper& classMapper = ClassMapper::getClassMap();
-        int currentNum = std::stoi(inputBuffer);
-        if (currentNum > 1)
-            classMapper.setTotalNum(currentNum);
+        if (inputBuffer[0] != '\0')
+            classMapper.setTotalNum(std::stoi(inputBuffer));
         if (ImGui::Button("确认")) {
             inputBuffer[0] = '\0';
             ClassifyImage(selectedItem);

@@ -34,7 +34,6 @@ std::vector<dataVec> ISODATA::updateCenters(const std::vector<dataVec>& data, co
     return centers;
 }
 dataVec ISODATA::calculateVariance(const std::vector<dataVec>& data, const std::vector<int>& labels, const std::vector<dataVec>& centers, int numClusters) {
-    size_t dim = data[0].size();
     dataVec variance(numClusters, 0.0);
     std::vector<int> count(numClusters, 0);
 
@@ -56,7 +55,6 @@ clusterNum(INIT_CLUSTER_NUM),maxIter(MAX_ITER),minSamples(MIN_SAMPLES),epsilon(E
 void ISODATA::Classify(const std::vector<Band>& bands, bool toAverage, unsigned char* classified) {
     ClassMapper& classMapper = ClassMapper::getClassMap();
     featureNum = bands.size();
-    const int classNum = classMapper.getTotalNum();
     int height = bands[0].value->height, width = bands[0].value->width;
     classified = new unsigned char[height * width * 3];
 
@@ -103,27 +101,27 @@ void ISODATA::Classify(const std::vector<Band>& bands, bool toAverage, unsigned 
         if (converged)
             break;
         dataVec variance = calculateVariance(data, labels, centers, currentClusters);
+        int nextClusters = currentClusters;
         for (int k = 0; k < currentClusters; k++) {
             if (variance[k] > splitThreshold) {
                 dataVec newCenter = centers[k];
                 for (size_t j = 0; j < featureNum; j++)
                     newCenter[j] += 5000;
                 centers.push_back(newCenter);
-                ++currentClusters;
+                ++nextClusters;
             }
         }
-
-        for (int k = 0; k < currentClusters; k++) {
-            for (int l = k + 1; l < currentClusters; l++) {
+        currentClusters = nextClusters;
+        for (int k = 0; k < currentClusters; k++)
+            for (int l = k + 1; l < currentClusters; l++)
                 if (euclideanDistance(centers[k], centers[l]) < epsilon) {
                     for (size_t j = 0; j < featureNum; j++)
                         centers[k][j] = (centers[k][j] + centers[l][j]) / 2.0;
                     centers.erase(centers.begin() + l);
-                    --currentClusters;
+                    --nextClusters;
                     --l;
                 }
-            }
-        }
+        
     }
     clusterNum = currentClusters;
     classMapper.generateRandomColorMap(clusterNum);
