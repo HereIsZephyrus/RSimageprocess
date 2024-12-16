@@ -57,6 +57,8 @@ public:
     void averageBands() {raster->averageBands();}
     void strechBands();
     void filterBands();
+    void unsupervised();
+    void supervised();
     void resetBandIndex(){raster->resetIndex();}
 };
 class LayerManager{

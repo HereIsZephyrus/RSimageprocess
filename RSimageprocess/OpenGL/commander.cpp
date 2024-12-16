@@ -8,6 +8,7 @@
 #include "commander.hpp"
 #include "window.hpp"
 #include "../interface.hpp"
+#include "../unsupervise_classifier.hpp"
 
 void BufferRecorder::initIO(GLFWwindow* window){
     memset(keyRecord, GL_FALSE, sizeof(keyRecord));
@@ -210,7 +211,7 @@ void Layer::filterBands(){
             ImGui::PushItemWidth(40);
             ImGui::InputText("##input", inputBuffer, sizeof(inputBuffer),ImGuiInputTextFlags_CharsDecimal);
             ImGui::PopItemWidth();
-            if (ImGui::Button("确认##para")) {
+            if (ImGui::Button("确认")) {
                 para["bandwidth"] = std::stoi(inputBuffer);
                 buffer.processes.push_back(BandProcess(selectedAddItem,para));
                 inputBuffer[0] = '\0';
@@ -225,6 +226,66 @@ void Layer::filterBands(){
             }
         }
         ImGui::PopFont();
+        ImGui::EndPopup();
+    }
+}
+void Layer::unsupervised(){
+    using methodStrMap = std::unordered_map<UnsuperviseClassifierType,std::string>;
+    static const methodStrMap methodList{
+        {UnsuperviseClassifierType::isodata,"ISODATA"},
+        {UnsuperviseClassifierType::kmean,"K-mean"},
+    };
+    ImGui::OpenPopup("Unsupervised");
+    ImVec2 pos = ImGui::GetMainViewport()->GetCenter();
+    ImGui::SetNextWindowPos(pos);
+    static UnsuperviseClassifierType selectedItem = UnsuperviseClassifierType::isodata;
+    if (ImGui::BeginPopup("Unsupervised")){
+        ImGui::PushFont(gui::chineseFont);
+        if (ImGui::BeginCombo("选择一种方式", methodList.at(selectedItem).c_str())) {
+            for (methodStrMap::const_iterator method = methodList.begin(); method != methodList.end(); method++){
+                bool isSelected = (selectedItem == method->first);
+                if (ImGui::Selectable(method->second.c_str(), isSelected))
+                    selectedItem = method->first;
+                if (isSelected)
+                    ImGui::SetItemDefaultFocus();
+            }
+            ImGui::EndCombo();
+        }
+        static char inputBuffer[10] = "";
+        ImGui::Text("分类数量:");
+        ImGui::SameLine();
+        ImGui::PushItemWidth(40);
+        ImGui::InputText("##input", inputBuffer, sizeof(inputBuffer),ImGuiInputTextFlags_CharsDecimal);
+        ImGui::PopItemWidth();
+        if (ImGui::Button("确认")) {
+            inputBuffer[0] = '\0';
+            gui::toShowUnsupervised = false;
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("取消")) {
+            inputBuffer[0] = '\0';
+            gui::toShowUnsupervised = false;
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::PopFont();
+        ImGui::EndPopup();
+    }
+}
+void Layer::supervised(){
+    ImGui::OpenPopup("Supervised");
+    ImVec2 pos = ImGui::GetMainViewport()->GetCenter();
+    ImGui::SetNextWindowPos(pos);
+    if (ImGui::BeginPopup("Supervised")){
+        if (ImGui::Button("确认")) {
+            gui::toShowSupervised = false;
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("取消")) {
+            gui::toShowSupervised = false;
+            ImGui::CloseCurrentPopup();
+        }
         ImGui::EndPopup();
     }
 }

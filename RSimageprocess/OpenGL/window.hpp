@@ -52,7 +52,7 @@ constexpr GLfloat dragCameraSpeed = 6.0f;
 constexpr GLfloat doubleClickBias = 0.2f;
 extern ImFont *englishFont,*chineseFont;
 extern bool toImportImage,toImportROI;
-extern bool toShowStatistic,toShowManageBand,toShowStrechLevel,toShowSpaceFilter;
+extern bool toShowStatistic,toShowManageBand,toShowStrechLevel,toShowSpaceFilter,toShowUnsupervised,toShowSupervised;
 int Initialization(GLFWwindow* window);
 void DrawBasic();
 bool DrawPopup();
@@ -63,5 +63,7 @@ void ShowStatistic();
 void ManageBands();
 void ChooseStrechLevel();
 void FilterBands();
+void UnsupervisedClassify();
+void SupervisedClassify();
 }
 #endif /* window_hpp */

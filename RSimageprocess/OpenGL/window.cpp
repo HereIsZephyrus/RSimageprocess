@@ -75,7 +75,7 @@ int initOpenGL(GLFWwindow *&window,std::string windowName) {
 namespace gui {
 ImFont *englishFont = nullptr,*chineseFont = nullptr;
 bool toImportImage = false,toImportROI = false;
-bool toShowStatistic = false,toShowManageBand = false,toShowStrechLevel = false,toShowSpaceFilter = false;
+bool toShowStatistic = false,toShowManageBand = false,toShowStrechLevel = false,toShowSpaceFilter = false,toShowUnsupervised = false,toShowSupervised = false;
 int Initialization(GLFWwindow *window) {
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
@@ -124,6 +124,14 @@ bool DrawPopup(){
         FilterBands();
         return true;
     }
+    if (toShowUnsupervised){
+        UnsupervisedClassify();
+        return  true;
+    }
+    if (toShowSupervised){
+        SupervisedClassify();
+        return true;
+    }
     return false;
 }
 void RenderLayerTree(){
@@ -136,7 +144,7 @@ void RenderLayerTree(){
 void RenderWorkspace(){
     WindowParas& windowPara = WindowParas::getInstance();
     BufferRecorder& buffer = BufferRecorder::getBuffer();
-    ImGui::BeginChild("Workspace",ImVec2(0,windowPara.WINDOW_HEIGHT / 3));
+    ImGui::BeginChild("Workspace",ImVec2(0,windowPara.WINDOW_HEIGHT / 2));
     ImGuiStyle& style = ImGui::GetStyle();
     const ImVec2 ButtonSize = ImVec2(windowPara.SIDEBAR_WIDTH * 3 / 7, 50);
     style.FramePadding = ImVec2(8.0f, 4.0f);
@@ -174,6 +182,13 @@ void RenderWorkspace(){
         ImGui::SameLine();
         if (ImGui::Button("空间滤波",ButtonSize)){
             toShowSpaceFilter = true;
+        }
+        if (ImGui::Button("无监督分类",ButtonSize)){
+            toShowUnsupervised = true;
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("监督分类",ButtonSize)){
+            toShowSupervised = true;
         }
     }
     style.FramePadding = ImVec2(4.0f, 2.0f);
@@ -223,5 +238,13 @@ void ChooseStrechLevel(){
 void FilterBands(){
     BufferRecorder& buffer = BufferRecorder::getBuffer();
     buffer.selectedLayer->filterBands();
+}
+void UnsupervisedClassify(){
+    BufferRecorder& buffer = BufferRecorder::getBuffer();
+    buffer.selectedLayer->unsupervised();
+}
+void SupervisedClassify(){
+    BufferRecorder& buffer = BufferRecorder::getBuffer();
+    buffer.selectedLayer->supervised();
 }
 }
