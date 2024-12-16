@@ -92,7 +92,7 @@ protected:
 };
 class Texture{
 public:
-    Texture(const std::vector<glm::vec3>& position, const std::vector<glm::vec2>& texturePos, GLuint textureID);
+    Texture(const std::vector<glm::vec3>& position, const std::vector<glm::vec2>& texturePos, GLuint textureID,bool useRGB);
     Texture(const Texture&) = delete;
     void operator=(const Texture&) = delete;
     ~Texture(){
@@ -138,11 +138,14 @@ using pTexture = std::shared_ptr<Texture>;
     pTexture texture;
     bool toAverage;
 public:
-    int RGBindex[3],pointIndex;
-    TextureManager(pTexture texturePtr) : texture(texturePtr),pointIndex(0),toAverage(false){
+    int RGBindex[3],pointIndex,grayIndex;
+    bool useRGB;
+    static constexpr int bandNum[2] = {1,3}; // gray - RGB
+    TextureManager(pTexture texturePtr) : texture(texturePtr),pointIndex(0),toAverage(false),useRGB(true){
         RGBindex[0] = 3; //red
         RGBindex[1] = 2; //green
         RGBindex[2] = 1; //blue
+        grayIndex = 0;
     }
     void draw() const{
         if (texture != nullptr)
@@ -151,8 +154,10 @@ public:
     void deleteTexture() {texture = nullptr;}
     void createtexture(pTexture texturePtr) {texture = texturePtr;}
     void processBand(unsigned short* RGB,std::shared_ptr<Spectum> band, int bias, const std::vector<BandProcess>& processes);
+    void processBand(unsigned short* Gray,std::shared_ptr<Spectum> band, const std::vector<BandProcess>& processes);
     void setToAverage(bool status) {toAverage = status;}
     bool getToAverage() const{return toAverage;}
+    std::string getIndicator(int index);
     std::string getStatus();
 };
 struct Band{
@@ -165,6 +170,8 @@ class Image : public Primitive{
     double **correlation;
     void calcBandCoefficent();
     double calcCoefficent(size_t bandind1,size_t bandind2);
+    void exportRGBImage(std::string filePath);
+    void exportGrayImage(std::string filePath);
 public:
     explicit Image(const std::vector<Vertex>& faceVertex):
     Primitive(faceVertex,GL_LINE_LOOP,ShaderBucket["line"].get()),textureManager(nullptr),correlation(nullptr){}
@@ -188,7 +195,7 @@ public:
     void showBandInfo(int bandIndex);
     void showBandCoefficient();
     std::string getTextureStatus(){return textureManager.getStatus();}
-    std::string getIndicator(int bandindex);
+    std::string getIndicator(int index){return textureManager.getIndicator(index);}
 };
 class ROI : public Primitive{
     glm::vec3 startPosition;

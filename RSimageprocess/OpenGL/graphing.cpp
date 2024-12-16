@@ -342,8 +342,12 @@ void Primitive::update(){
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindVertexArray(0);
 }
-Texture::Texture(const std::vector<glm::vec3>& position, const std::vector<glm::vec2>& location, GLuint textureID):
-textureID(textureID),shape(GL_TRIANGLE_FAN),shader(ShaderBucket["image"].get()){
+Texture::Texture(const std::vector<glm::vec3>& position, const std::vector<glm::vec2>& location, GLuint textureID,bool useRGB):
+textureID(textureID),shape(GL_TRIANGLE_FAN){
+    if (useRGB)
+        shader = ShaderBucket["RGB"].get();
+    else
+        shader = ShaderBucket["Gray"].get();
     vertexNum = position.size();
     vertices = new GLfloat[vertexNum * stride];
     for (size_t i = 0; i < vertexNum; i++){
@@ -579,6 +583,46 @@ void TextureManager::processBand(unsigned short* RGB,std::shared_ptr<Spectum> ba
                 RGB[loc * 3 + bias] = buffers[0][y][x];
         }
 }
+void TextureManager::processBand(unsigned short* Gray,std::shared_ptr<Spectum> band, const std::vector<BandProcess>& processes){
+    const int width = band->width,height = band->height;
+    for (int y = 0; y < height; y++)
+        for (int x = 0; x < width; x++){
+            int loc = y * width + x;
+            if (toAverage)
+                Gray[loc] = band->average(y,x);
+            else
+                Gray[loc] = band->strech(y,x);
+        }
+    if (processes.empty())
+        return;
+    std::vector<std::vector<unsigned short>> buffers[2];
+    for (int y = 0; y < height; y++){
+        std::vector<unsigned short> row1(width),row2(width);
+        for (int x = 0; x < width; x++){
+            int loc = y * width + x;
+            row1[x] = Gray[loc];
+            row2[x] = 0;
+        }
+        buffers[0].push_back(row1);
+        buffers[1].push_back(row2);
+    }
+    bool swapbuffer = false;
+    for (std::vector<BandProcess>::const_iterator process = processes.begin(); process != processes.end(); process++){
+        if (!swapbuffer)
+            process->execute(buffers[0],buffers[1]);
+        else
+            process->execute(buffers[1],buffers[0]);
+        swapbuffer = !swapbuffer;
+    }
+    for (int y = 0; y < height; y++)
+        for (int x = 0; x < width; x++){
+            int loc = y * width + x;
+            if (swapbuffer)
+                Gray[loc] = buffers[1][y][x];
+            else
+                Gray[loc] = buffers[0][y][x];
+        }
+}
 std::string TextureManager::getStatus(){
     std::string status = "_" + std::to_string(RGBindex[0]) + std::to_string(RGBindex[1]) + std::to_string(RGBindex[2]);
     if (toAverage)
@@ -660,8 +704,10 @@ void Image::manageBands() {
     ImVec2 pos = ImGui::GetMainViewport()->GetCenter();
     ImGui::SetNextWindowPos(pos);
     if (ImGui::BeginPopup("Manage Bands")) {
-        if (textureManager.pointIndex <= 2){
+        if (textureManager.pointIndex < textureManager.bandNum[textureManager.useRGB]){
             std::string selectInfo = "Select the " + colormap[textureManager.pointIndex] + " band:";
+            if (textureManager.useRGB == false)
+                selectInfo = "Select view band:";
             ImGui::Text("%s", selectInfo.c_str());
         }
         int counter = 0;
@@ -675,24 +721,30 @@ void Image::manageBands() {
         for (std::vector<std::string>::const_iterator bandStr = bandStrVec.begin(); bandStr != bandStrVec.end(); bandStr++)
             bandCharVec.push_back(bandStr->c_str());
         int selectedItem = -1;
-        if (ImGui::ListBox("##loaded bands", &selectedItem, bandCharVec.data(), static_cast<int>(bandCharVec.size()), 7) && textureManager.pointIndex <= 2){
-            textureManager.RGBindex[textureManager.pointIndex] = selectedItem;
+        if (ImGui::ListBox("##loaded bands", &selectedItem, bandCharVec.data(), static_cast<int>(bandCharVec.size()), 7) && textureManager.pointIndex < textureManager.bandNum[textureManager.useRGB]){
+            if (textureManager.useRGB)
+                textureManager.RGBindex[textureManager.pointIndex] = selectedItem;
+            else
+                textureManager.grayIndex = selectedItem;
             ++textureManager.pointIndex;
         }
         ImGui::PushFont(gui::chineseFont);
-        static bool useRGB = true;
-        static constexpr std::array<std::string, 2> imgeTypeStr{"灰度图像","真彩色合成"};
-        if (ImGui::BeginCombo("加载类型", imgeTypeStr[useRGB].c_str())) {
+        static constexpr std::array<std::string, 2> imgeTypeStr{"灰度图像","RGB合成"};
+        if (ImGui::BeginCombo("加载类型", imgeTypeStr[textureManager.useRGB].c_str())) {
             for (int i = 0; i < imgeTypeStr.size(); i++) {
                 bool isSelected = (selectedItem == i);
-                if (ImGui::Selectable(imgeTypeStr[i].c_str(), isSelected))
-                    useRGB = i;
+                if (ImGui::Selectable(imgeTypeStr[i].c_str(), isSelected)){
+                    if (textureManager.useRGB != i){
+                        textureManager.pointIndex = 0;
+                        textureManager.useRGB = i;
+                    }
+                }
                 if (isSelected)
                     ImGui::SetItemDefaultFocus();
             }
             ImGui::EndCombo();
         }
-        if (textureManager.pointIndex > 2){
+        if (textureManager.pointIndex >= textureManager.bandNum[textureManager.useRGB]){
             if (ImGui::Button("确认")) {
                 deleteTexture();
                 generateTexture({});
@@ -723,6 +775,12 @@ void Image::strechBands(StrechLevel level,bool useGlobalRange) {
     generateTexture({});
 }
 void Image::exportImage(std::string filePath){
+    if (textureManager.useRGB)
+        exportRGBImage(filePath);
+    else
+        exportGrayImage(filePath);
+}
+void Image::exportRGBImage(std::string filePath){
     const int width = bands[0].value->width, height = bands[0].value->height;
     cv::Mat rChannel = cv::Mat::zeros(height, width, CV_8UC1);
     cv::Mat gChannel = cv::Mat::zeros(height, width, CV_8UC1);
@@ -747,13 +805,31 @@ void Image::exportImage(std::string filePath){
     std::vector<cv::Mat> channels = {rChannel, gChannel, bChannel};
     cv::merge(channels, rgbImage);
     cv::imwrite(filePath.c_str(), rgbImage);
-
 }
-std::string Image::getIndicator(int index){
+void Image::exportGrayImage(std::string filePath){
+    const int width = bands[0].value->width, height = bands[0].value->height;
+    cv::Mat image = cv::Mat::zeros(height, width, CV_8UC1);
+    std::shared_ptr<Spectum> val = bands[textureManager.grayIndex].value;
+    for (int y = 0; y < height; y++)
+        for (int x = 0; x < width; x++){
+            if (textureManager.getToAverage())
+                image.at<uchar>(y,x) = static_cast<uchar>(static_cast<float>(val->average(y, x)) * 255 / 65535);
+            else
+                image.at<uchar>(y,x) = static_cast<uchar>(static_cast<float>(val->strech(y, x)) * 255 / 65535);
+        }
+    cv::imwrite(filePath.c_str(), image);
+}
+std::string TextureManager::getIndicator(int index){
     std::string indicator = "";
-    if (textureManager.RGBindex[0] == index)    return "(R)";
-    if (textureManager.RGBindex[1] == index)    return "(G)";
-    if (textureManager.RGBindex[2] == index)    return "(B)";
+    if (pointIndex < bandNum[useRGB])
+        return indicator;
+    if (useRGB){
+        if (RGBindex[0] == index)    return "(R)";
+        if (RGBindex[1] == index)    return "(G)";
+        if (RGBindex[2] == index)    return "(B)";
+    }else{
+        if (grayIndex == index) return"(S)";
+    }
     return indicator;
 }
 void Image::LoadNewBand(std::string searchingPath,std::string spectum){
@@ -782,14 +858,7 @@ void Image::draw() const{
     textureManager.draw();
 }
 void Image::generateTexture(const std::vector<BandProcess>& processes){
-    std::shared_ptr<Spectum> rval = bands[textureManager.RGBindex[0]].value;
-    std::shared_ptr<Spectum> gval = bands[textureManager.RGBindex[1]].value;
-    std::shared_ptr<Spectum> bval = bands[textureManager.RGBindex[2]].value;
-    const int width = rval->width, height = rval->height;
-    unsigned short *RGB = new unsigned short[width * height * 3];
-    textureManager.processBand(RGB,bval,0,processes);
-    textureManager.processBand(RGB,gval,1,processes);
-    textureManager.processBand(RGB,rval,2,processes);
+    const int width = bands[0].value->width, height = bands[0].value->height;
     GLuint textureID;
     glGenTextures(1, &textureID);
     glBindTexture(GL_TEXTURE_2D, textureID);
@@ -797,17 +866,32 @@ void Image::generateTexture(const std::vector<BandProcess>& processes){
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16, width, height, 0, GL_RGB, GL_UNSIGNED_SHORT, RGB);
+    if (textureManager.useRGB){
+        std::shared_ptr<Spectum> rval = bands[textureManager.RGBindex[0]].value;
+        std::shared_ptr<Spectum> gval = bands[textureManager.RGBindex[1]].value;
+        std::shared_ptr<Spectum> bval = bands[textureManager.RGBindex[2]].value;
+        unsigned short *RGB = new unsigned short[width * height * 3];
+        textureManager.processBand(RGB,bval,0,processes);
+        textureManager.processBand(RGB,gval,1,processes);
+        textureManager.processBand(RGB,rval,2,processes);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16, width, height, 0, GL_RGB, GL_UNSIGNED_SHORT, RGB);
+        delete[] RGB;
+    }else{
+        std::shared_ptr<Spectum> val = bands[textureManager.grayIndex].value;
+        unsigned short *Gray = new unsigned short[width * height];
+        textureManager.processBand(Gray,val,processes);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_R16, width, height, 0, GL_RED, GL_UNSIGNED_SHORT, Gray);
+        delete[] Gray;
+    }
     glGenerateMipmap(GL_TEXTURE_2D);
     std::vector<glm::vec3> position;
     std::vector<glm::vec2> texturePos;
     for (int index = 0; index < vertexNum ; index++){
         position.push_back(glm::vec3(vertices[index * stride],vertices[index * stride + 1],vertices[index * stride + 2]));
-        texturePos.push_back(rval->validRange[index]);
+        texturePos.push_back(bands[0].value->validRange[index]);
     }
-    std::shared_ptr<Texture> texture = std::make_shared<Texture>(position,texturePos,textureID);
+    std::shared_ptr<Texture> texture = std::make_shared<Texture>(position,texturePos,textureID,textureManager.useRGB);
     textureManager.createtexture(texture);
-    delete[] RGB;
     glBindTexture(GL_TEXTURE_2D, 0);
 }
 ROI::ROI(const std::vector<Vertex>& inputVertex):Primitive(inputVertex,GL_LINE_LOOP,ShaderBucket["line"].get()){
@@ -856,8 +940,15 @@ void InitResource(GLFWwindow *window){
     {
         pShader image (new Shader());
         image->attchShader(filePath("texture_vertices.vs"),GL_VERTEX_SHADER);
-        image->attchShader(filePath("texture.frag"),GL_FRAGMENT_SHADER);
+        image->attchShader(filePath("texture_RGB.frag"),GL_FRAGMENT_SHADER);
         image->linkProgram();
-        ShaderBucket["image"] = std::move(image);
+        ShaderBucket["RGB"] = std::move(image);
+    }
+    {
+        pShader image (new Shader());
+        image->attchShader(filePath("texture_vertices.vs"),GL_VERTEX_SHADER);
+        image->attchShader(filePath("texture_Gray.frag"),GL_FRAGMENT_SHADER);
+        image->linkProgram();
+        ShaderBucket["Gray"] = std::move(image);
     }
 }
