@@ -49,7 +49,7 @@ int main(int argc, const char * argv[]) {
     glfwTerminate();
     return 0;
 }
-static void Initialization(GLFWwindow *& window){
+void Initialization(GLFWwindow *& window){
     if (!HAS_INIT_OPENGL_CONTEXT && initOpenGL(window,"2025Autumn数字图像处理") != 0){
         std::cout<<"init OpenGL failed"<<std::endl;
         return;

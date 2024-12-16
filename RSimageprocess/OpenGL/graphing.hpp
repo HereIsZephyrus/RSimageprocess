@@ -139,7 +139,7 @@ using pTexture = std::shared_ptr<Texture>;
     bool toAverage;
 public:
     int RGBindex[3],pointIndex;
-    TextureManager(pTexture texturePtr) : texture(texturePtr),pointIndex(3),toAverage(false){
+    TextureManager(pTexture texturePtr) : texture(texturePtr),pointIndex(0),toAverage(false){
         RGBindex[0] = 3; //red
         RGBindex[1] = 2; //green
         RGBindex[2] = 1; //blue

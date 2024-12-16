@@ -655,19 +655,15 @@ void Image::showBandInfo(int bandindex){
     ImGui::PlotHistogram("##直方图数据", bands[bandindex].value->hist.data(), static_cast<int>(bands[bandindex].value->hist.size()), 0, nullptr, 0.0f, bands[bandindex].value->HistHeight, ImVec2(0, 150));
 }
 void Image::manageBands() {
-    if (textureManager.pointIndex > 2){
-        deleteTexture();
-        generateTexture({});
-        gui::toShowManageBand = false;
-        return;
-    }
     static constexpr std::array<std::string,3> colormap = {"red","green","blue"};
     ImGui::OpenPopup("Manage Bands");
     ImVec2 pos = ImGui::GetMainViewport()->GetCenter();
     ImGui::SetNextWindowPos(pos);
     if (ImGui::BeginPopup("Manage Bands")) {
-        std::string selectInfo = "Select the " + colormap[textureManager.pointIndex] + " band:";
-        ImGui::Text("%s", selectInfo.c_str());
+        if (textureManager.pointIndex <= 2){
+            std::string selectInfo = "Select the " + colormap[textureManager.pointIndex] + " band:";
+            ImGui::Text("%s", selectInfo.c_str());
+        }
         int counter = 0;
         std::vector<std::string> bandStrVec;
         for (std::vector<Band>::const_reverse_iterator band = bands.rbegin(); band != bands.rend(); band++){
@@ -679,10 +675,31 @@ void Image::manageBands() {
         for (std::vector<std::string>::const_iterator bandStr = bandStrVec.begin(); bandStr != bandStrVec.end(); bandStr++)
             bandCharVec.push_back(bandStr->c_str());
         int selectedItem = -1;
-        if (ImGui::ListBox("##loaded bands", &selectedItem, bandCharVec.data(), static_cast<int>(bandCharVec.size()), 7)){
+        if (ImGui::ListBox("##loaded bands", &selectedItem, bandCharVec.data(), static_cast<int>(bandCharVec.size()), 7) && textureManager.pointIndex <= 2){
             textureManager.RGBindex[textureManager.pointIndex] = selectedItem;
             ++textureManager.pointIndex;
         }
+        ImGui::PushFont(gui::chineseFont);
+        static bool useRGB = true;
+        static constexpr std::array<std::string, 2> imgeTypeStr{"灰度图像","真彩色合成"};
+        if (ImGui::BeginCombo("加载类型", imgeTypeStr[useRGB].c_str())) {
+            for (int i = 0; i < imgeTypeStr.size(); i++) {
+                bool isSelected = (selectedItem == i);
+                if (ImGui::Selectable(imgeTypeStr[i].c_str(), isSelected))
+                    useRGB = i;
+                if (isSelected)
+                    ImGui::SetItemDefaultFocus();
+            }
+            ImGui::EndCombo();
+        }
+        if (textureManager.pointIndex > 2){
+            if (ImGui::Button("确认")) {
+                deleteTexture();
+                generateTexture({});
+                gui::toShowManageBand = false;
+            }
+        }
+        ImGui::PopFont();
         ImGui::EndPopup();
     }
 }

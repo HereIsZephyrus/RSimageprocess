@@ -124,7 +124,7 @@ void Layer::strechBands() {
         static int selectedItem = 0;
         static bool useGlobalRange = true;
         if (ImGui::BeginCombo("选择一种方式", strechList[selectedItem].second.c_str())) {
-            for (int i = 0; i < strechList.size(); ++i) {
+            for (int i = 0; i < strechList.size(); i++) {
                 bool isSelected = (selectedItem == i);
                 if (ImGui::Selectable(strechList[i].second.c_str(), isSelected))
                     selectedItem = i;
@@ -216,8 +216,11 @@ void LayerManager::importlayer(std::shared_ptr<BundleParser> parser){
             continue;
         image->LoadNewBand(imagePath,parser->getWaveLength(rasterInfo->first-1));
     }
-    image->generateTexture({});
+    gui::toShowManageBand = true;
+    image->manageBands();
     addLayer(newLayer);
+    BufferRecorder& buffer = BufferRecorder::getBuffer();
+    buffer.selectedLayer = newLayer;
     Camera2D& camera = Camera2D::getView();
     camera.setExtent(newLayer->getExtent());
     std::cout<<"imported "<<parser->getFileIdentifer()<<std::endl;
