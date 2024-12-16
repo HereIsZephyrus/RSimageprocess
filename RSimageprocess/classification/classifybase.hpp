@@ -74,21 +74,20 @@ public:
     void PrintPrecision();
 };
 class Classifier{
-using Dataset = std::vector<Sample>;
-using ClassMat = std::vector<std::vector<int>>;
-using vClasses = std::vector<int>;
 protected:
+    using Dataset = std::vector<Sample>;
+    using ClassMat = std::vector<std::vector<int>>;
+    using vClasses = std::vector<int>;
     size_t featureNum;
     std::string classifierName;
     static constexpr int margin = 2;
 public:
-    virtual int Predict(const dataVec& x) = 0;
     Accuracy accuracy;
     Classifier(){classifierName = "classifier";}
     std::string getName() const {return classifierName;}
-    virtual void Train(const Dataset &dataset) = 0;
     void Classify(const std::vector<Band>& bands,unsigned char* classified);
     void Examine(const Dataset& samples);
-    virtual void Trian(const Dataset& dataset) = 0;
+    virtual void Train(const Dataset &dataset) = 0;
+    virtual int Predict(const dataVec& x) = 0;
 };
 #endif /* classifybase_hpp */

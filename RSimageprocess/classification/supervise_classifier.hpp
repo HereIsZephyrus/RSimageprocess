@@ -7,7 +7,6 @@ struct BasicBayesParaList{
     std::vector<double> mu,sigma;
 };
 class NaiveBayesClassifier : public Classifier{
-using Dataset = std::vector<Sample>;
 protected:
     std::vector<BasicBayesParaList> para;
     virtual bool CalcClassProb(float* prob) = 0;
@@ -17,10 +16,9 @@ public:
     NaiveBayesClassifier(){this->classifierName = "naiveBayes";};
     ~NaiveBayesClassifier(){}
     int Predict(const dataVec& x) override;
-    virtual void Trian(const Dataset& dataset) override;
+    virtual void Train(const Dataset& dataset) override;
 };
 class FisherClassifier : public Classifier{
-using Dataset = std::vector<Sample>;
 protected:
     std::vector<dataVec> mu;
     dataVec signal,projMat;
@@ -32,7 +30,6 @@ public:
     int Predict(const dataVec& x) override;
 };
 class SVMClassifier : public Classifier{
-using Dataset = std::vector<Sample>;
 protected:
     class OVOSVM {
         double learningRate,bias,limit;
@@ -65,7 +62,6 @@ public:
     int Predict(const dataVec& x) override;
 };
 class BPClassifier : public Classifier{
-using Dataset = std::vector<Sample>;
 protected:
     int classNum,hiddenSize;
     std::vector<dataVec> weightsInput2Hidden,weightsHidden2Output,deltaWeightsInput2Hidden,deltaWeightsHidden2Output;
@@ -82,7 +78,6 @@ public:
 };
 
 class RandomForestClassifier : public Classifier{
-using Dataset = std::vector<Sample>;
 using ProbClass = unordered_map<int,double>;
 protected:
     class DecisionTree {

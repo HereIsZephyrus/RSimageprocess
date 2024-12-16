@@ -34,7 +34,7 @@ double NaiveBayesClassifier::CalculateClassProbability(unsigned int classID,cons
     }
     return res;
 }
-void NaiveBayesClassifier::Trian(const Dataset& dataset) {
+void NaiveBayesClassifier::Train(const Dataset& dataset) {
     const int classNum = ClassMapper::getClassMap().getTotalNum();
     float* classProbs = new float[classNum];
     CalcClassProb(classProbs);

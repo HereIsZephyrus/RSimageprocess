@@ -78,7 +78,6 @@ void Accuracy::PrintPrecision(){
 }
 void Classifier::Classify(const std::vector<Band>& bands,unsigned char* classified){
     ClassMapper& classMapper = ClassMapper::getClassMap();
-    const int classNum = classMapper.getTotalNum();
     int height = bands[0].value->height, width = bands[0].value->width;
     classified = new unsigned char[height * width * 3];
     for (int y = 0; y < height; y += margin)
