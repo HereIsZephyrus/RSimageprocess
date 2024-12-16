@@ -158,14 +158,15 @@ void Layer::filterBands(){
         {BandProcessType::laplacian,"Laplacian变换"},
         {BandProcessType::sobel,"Sobel变换"},
     };
+    static bool toSetParas = false;
+    static BandProcessType selectedAddItem = BandProcessType::meanBlur;
     ImGui::OpenPopup("Choose Filter Methods");
     ImVec2 pos = ImGui::GetMainViewport()->GetCenter();
     ImGui::SetNextWindowPos(pos);
     BufferRecorder& buffer = BufferRecorder::getBuffer();
     if (ImGui::BeginPopup("Choose Filter Methods")) {
         ImGui::PushFont(gui::chineseFont);
-        static BandProcessType selectedAddItem = BandProcessType::meanBlur;
-        ImGui::BeginChild("##selectable table", ImVec2(150, 100), true);
+        ImGui::BeginChild("##selectable table", ImVec2(150, 200), true);
         ImGui::Text("<可选操作>");
         for (methodStrMap::const_iterator method = methodList.begin(); method != methodList.end(); method++){
             bool isSelected = (selectedAddItem == method->first);
@@ -177,30 +178,51 @@ void Layer::filterBands(){
         }
         ImGui::EndChild();
         ImGui::SameLine();
-        ImGui::BeginChild("##adding table", ImVec2(150, 100), true);
+        ImGui::BeginChild("##adding table", ImVec2(250, 200), true);
         ImGui::Text("<待执行操作>");
         for (std::vector<BandProcess>::iterator process = buffer.processes.begin(); process != buffer.processes.end(); process++){
-            ImGui::Text("%s",methodList.at(process->getType()).c_str());
+            ImGui::Text("%s",(methodList.at(process->getType()) + ": " + process->printParas()).c_str());
         }
         ImGui::EndChild();
         BufferRecorder& buffer = BufferRecorder::getBuffer();
-        if (ImGui::Button("添加")){
-            std::map<std::string,float> para ={{"bandwidth",3}};
-            buffer.processes.push_back(BandProcess(selectedAddItem,para));
-        }
-        ImGui::SameLine();
-        if (ImGui::Button("确认")) {
+        if (ImGui::Button("确认##texture")) {
             raster->deleteTexture();
             raster->generateTexture(buffer.processes);
-            buffer.processes.clear();
             gui::toShowSpaceFilter = false;
             ImGui::CloseCurrentPopup();
         }
         ImGui::SameLine();
-        if (ImGui::Button("取消")) {
-            buffer.processes.clear();
+        if (ImGui::Button("取消##texture")) {
             gui::toShowSpaceFilter = false;
             ImGui::CloseCurrentPopup();
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("清空##texture")) {
+            buffer.processes.clear();
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("添加") || toSetParas){
+            toSetParas = true;
+            static char inputBuffer[10] = "";
+            std::map<std::string,float> para;
+            ImGui::Text("带宽:");
+            ImGui::SameLine();
+            ImGui::PushItemWidth(40);
+            ImGui::InputText("##input", inputBuffer, sizeof(inputBuffer),ImGuiInputTextFlags_CharsDecimal);
+            ImGui::PopItemWidth();
+            if (ImGui::Button("确认##para")) {
+                para["bandwidth"] = std::stoi(inputBuffer);
+                buffer.processes.push_back(BandProcess(selectedAddItem,para));
+                inputBuffer[0] = '\0';
+                toSetParas = false;
+                ImGui::CloseCurrentPopup();
+            }
+            ImGui::SameLine();
+            if (ImGui::Button("取消##para")) {
+                inputBuffer[0] = '\0';
+                toSetParas = false;
+                ImGui::CloseCurrentPopup();
+            }
         }
         ImGui::PopFont();
         ImGui::EndPopup();

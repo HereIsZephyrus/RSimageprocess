@@ -13,6 +13,7 @@
 #include "graphing.hpp"
 #include "window.hpp"
 #include "camera.hpp"
+#include "commander.hpp"
 
 std::map<std::string,pShader > ShaderBucket;
 GLchar* filePath(const char* fileName){
@@ -395,6 +396,10 @@ void Texture::draw() const {
     glBindVertexArray(0);
     return;
 }
+std::string BandProcess::printParas(){
+    std::string paraStr = "bandwidth = " + std::to_string(static_cast<int>(paras.at("bandwidth")));
+    return paraStr;
+}
 void BandProcess::execute(Matrix& input,Matrix& output) const{
     switch (type) {
         case BandProcessType::meanBlur:
@@ -627,6 +632,16 @@ std::string TextureManager::getStatus(){
     std::string status = "_" + std::to_string(RGBindex[0]) + std::to_string(RGBindex[1]) + std::to_string(RGBindex[2]);
     if (toAverage)
         status += "_aver";
+    static const std::unordered_map<BandProcessType,std::string> methodList{
+        {BandProcessType::meanBlur,"_meanBlur"},
+        {BandProcessType::gaussianBlur,"_gaussianBlur"},
+        {BandProcessType::laplacian,"_Laplacian"},
+        {BandProcessType::sobel,"_Sobel"},
+    };
+    const std::vector<BandProcess>& processes = BufferRecorder::getBuffer().processes;
+    for (std::vector<BandProcess>::const_iterator process = processes.begin(); process != processes.end(); process++){
+        status += methodList.at(process->getType());
+    }
     return status;
 }
 double Image::calcCoefficent(size_t bandind1,size_t bandind2){
@@ -788,19 +803,19 @@ void Image::exportRGBImage(std::string filePath){
     std::shared_ptr<Spectum> rval = bands[textureManager.RGBindex[0]].value;
     std::shared_ptr<Spectum> gval = bands[textureManager.RGBindex[1]].value;
     std::shared_ptr<Spectum> bval = bands[textureManager.RGBindex[2]].value;
+    unsigned short *RGB = new unsigned short[width * height * 3];
+    const std::vector<BandProcess>& processes = BufferRecorder::getBuffer().processes;
+    textureManager.processBand(RGB,bval,0,processes);
+    textureManager.processBand(RGB,gval,1,processes);
+    textureManager.processBand(RGB,rval,2,processes);
     for (int y = 0; y < height; y++)
         for (int x = 0; x < width; x++){
-            if (textureManager.getToAverage()){
-                rChannel.at<uchar>(y,x) = static_cast<uchar>(static_cast<float>(rval->average(y, x)) * 255 / 65535);
-                gChannel.at<uchar>(y,x) = static_cast<uchar>(static_cast<float>(gval->average(y, x)) * 255 / 65535);
-                bChannel.at<uchar>(y,x) = static_cast<uchar>(static_cast<float>(bval->average(y, x)) * 255 / 65535);
-            }
-            else{
-                rChannel.at<uchar>(y,x) = static_cast<uchar>(static_cast<float>(rval->strech(y, x)) * 255 / 65535);
-                gChannel.at<uchar>(y,x) = static_cast<uchar>(static_cast<float>(gval->strech(y, x)) * 255 / 65535);
-                bChannel.at<uchar>(y,x) = static_cast<uchar>(static_cast<float>(bval->strech(y, x)) * 255 / 65535);
-            }
+            int loc = y * width + x;
+            rChannel.at<uchar>(y,x) = static_cast<uchar>(static_cast<float>(RGB[loc * 3 + 0]) * 255 / 65535);
+            gChannel.at<uchar>(y,x) = static_cast<uchar>(static_cast<float>(RGB[loc * 3 + 1]) * 255 / 65535);
+            bChannel.at<uchar>(y,x) = static_cast<uchar>(static_cast<float>(RGB[loc * 3 + 2]) * 255 / 65535);
         }
+    delete[] RGB;
     cv::Mat rgbImage;
     std::vector<cv::Mat> channels = {rChannel, gChannel, bChannel};
     cv::merge(channels, rgbImage);
@@ -810,12 +825,15 @@ void Image::exportGrayImage(std::string filePath){
     const int width = bands[0].value->width, height = bands[0].value->height;
     cv::Mat image = cv::Mat::zeros(height, width, CV_8UC1);
     std::shared_ptr<Spectum> val = bands[textureManager.grayIndex].value;
+    unsigned short *Gray = new unsigned short[width * height];
+    const std::vector<BandProcess>& processes = BufferRecorder::getBuffer().processes;
+    textureManager.processBand(Gray,val,processes);
     for (int y = 0; y < height; y++)
         for (int x = 0; x < width; x++){
             if (textureManager.getToAverage())
-                image.at<uchar>(y,x) = static_cast<uchar>(static_cast<float>(val->average(y, x)) * 255 / 65535);
+                image.at<uchar>(y,x) = static_cast<uchar>(static_cast<float>(Gray[y * width + x]) * 255 / 65535);
             else
-                image.at<uchar>(y,x) = static_cast<uchar>(static_cast<float>(val->strech(y, x)) * 255 / 65535);
+                image.at<uchar>(y,x) = static_cast<uchar>(static_cast<float>(Gray[y * width + x]) * 255 / 65535);
         }
     cv::imwrite(filePath.c_str(), image);
 }
