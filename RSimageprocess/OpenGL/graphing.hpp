@@ -123,7 +123,7 @@ enum class BandProcessType{
 class BandProcess{
     using Matrix = std::vector<std::vector<unsigned short>>;
     BandProcessType type;
-    std::map<std::string,int> paras;
+    std::map<std::string,float> paras;
     void executeMeanBlur(Matrix& input,Matrix& output) const;
     void executeGaussianBlur(Matrix& input,Matrix& output) const;
     void executeLaplacianBlur(Matrix& input,Matrix& output) const;
