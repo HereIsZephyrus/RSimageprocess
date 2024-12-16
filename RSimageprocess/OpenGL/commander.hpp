@@ -56,6 +56,7 @@ public:
     void manageBands() const{raster->manageBands();}
     void averageBands() {raster->averageBands();}
     void strechBands();
+    void filterBands();
     void resetBandIndex(){raster->resetIndex();}
 };
 class LayerManager{

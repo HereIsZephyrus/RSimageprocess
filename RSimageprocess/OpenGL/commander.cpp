@@ -122,7 +122,7 @@ void Layer::strechBands() {
     if (ImGui::BeginPopup("Choose Strech Level")) {
         ImGui::PushFont(gui::chineseFont);
         static int selectedItem = 0;
-        static bool useGlobalRange = false;
+        static bool useGlobalRange = true;
         if (ImGui::BeginCombo("选择一种方式", strechList[selectedItem].second.c_str())) {
             for (int i = 0; i < strechList.size(); ++i) {
                 bool isSelected = (selectedItem == i);
@@ -146,6 +146,47 @@ void Layer::strechBands() {
         ImGui::SameLine();
         if (ImGui::RadioButton("使用全局极值", useGlobalRange))
             useGlobalRange = !useGlobalRange;
+        ImGui::PopFont();
+        ImGui::EndPopup();
+    }
+}
+void Layer::filterBands(){
+    static constexpr std::array<std::pair<BandProcessType,std::string>,4> methodList{
+        std::make_pair(BandProcessType::meanBlur,"均值滤波"),
+        std::make_pair(BandProcessType::gaussianBlur,"高斯滤波"),
+        std::make_pair(BandProcessType::laplacian,"Laplacian变换"),
+        std::make_pair(BandProcessType::sobel,"Sobel变换"),
+    };
+    ImGui::OpenPopup("Choose Strech Level");
+    ImVec2 pos = ImGui::GetMainViewport()->GetCenter();
+    ImGui::SetNextWindowPos(pos);
+    if (ImGui::BeginPopup("Choose Strech Level")) {
+        ImGui::PushFont(gui::chineseFont);
+        static int selectedItem = 0;
+        if (ImGui::BeginCombo("选择一种方式", methodList[selectedItem].second.c_str())) {
+            for (int i = 0; i < methodList.size(); ++i) {
+                bool isSelected = (selectedItem == i);
+                if (ImGui::Selectable(methodList[i].second.c_str(), isSelected))
+                    selectedItem = i;
+                if (isSelected)
+                    ImGui::SetItemDefaultFocus();
+            }
+            ImGui::EndCombo();
+        }
+        if (ImGui::Button("确认")) {
+            std::vector<BandProcess> processes;
+            std::map<std::string,float> para ={{"bandwidth",3}};
+            processes.push_back(BandProcess(methodList[selectedItem].first,para));
+            raster->deleteTexture();
+            raster->generateTexture(processes);
+            gui::toShowSpaceFilter = false;
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("取消")) {
+            gui::toShowSpaceFilter = false;
+            ImGui::CloseCurrentPopup();
+        }
         ImGui::PopFont();
         ImGui::EndPopup();
     }

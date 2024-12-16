@@ -129,6 +129,8 @@ class BandProcess{
     void executeLaplacianBlur(Matrix& input,Matrix& output) const;
     void executeSobelBlur(Matrix& input,Matrix& output) const;
 public:
+    BandProcess(BandProcessType processType,const std::map<std::string,float>& inputParas):
+    type(processType),paras(inputParas){}
     void execute(Matrix& input,Matrix& output) const;
 };
 class TextureManager{

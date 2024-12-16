@@ -415,17 +415,19 @@ void BandProcess::executeMeanBlur(Matrix& input,Matrix& output) const{
         if (y >= margin) ystart = y - margin;
         if (y < height - margin)   yterm = y + margin;
         for (size_t x = 0; x < width; x++){
+            if (input[y][x] == 0)
+                continue;
             size_t xstart = 0, xterm = width - 1;
             if (x >= margin) xstart = x - margin;
             if (x < height - margin)   xterm = x + margin;
-            float sum = 0;
+            double sum = 0;
             int count = 0;
-            for (size_t i = ystart; i < yterm; i++)
-                for (size_t j = xstart; j < xterm; x++){
+            for (size_t i = ystart; i <= yterm; i++)
+                for (size_t j = xstart; j <= xterm; j++){
                     sum += input[i][j];
                     ++count;
                 }
-            output[y][x] = sum / count;
+            output[y][x] = static_cast<double>(sum / count);
         }
     }
 }
@@ -449,12 +451,16 @@ void BandProcess::executeGaussianBlur(Matrix& input,Matrix& output) const{
         if (y >= margin) ystart = y - margin;
         if (y < height - margin)   yterm = y + margin;
         for (size_t x = 0; x < width; x++){
+            if (input[y][x] == 0)
+                continue;
             size_t xstart = 0, xterm = width - 1;
             if (x >= margin) xstart = x - margin;
             if (x < height - margin)   xterm = x + margin;
-            for (size_t i = ystart; i < yterm; i++)
-                for (size_t j = xstart; j < xterm; x++)
-                    output[y][x] += input[i][j] * kernel[ystart - y + margin][xstart -x + margin];
+            double sum = 0.0;
+            for (size_t i = ystart; i <= yterm; i++)
+                for (size_t j = xstart; j <= xterm; j++)
+                    sum += input[i][j] * kernel[i - y + margin][j -x + margin];
+            output[y][x] = static_cast<unsigned short>(sum);
         }
     }
 }
@@ -462,9 +468,9 @@ void BandProcess::executeLaplacianBlur(Matrix& input,Matrix& output) const{
     const int bandwidth = static_cast<int>(paras.at("bandwidth")), margin = bandwidth / 2;
     const size_t width = input[0].size(),height = input.size();
     std::vector<std::vector<double>> kernel(bandwidth,std::vector<double>(bandwidth,0));
-    for (size_t y = 0; y < height; y++)
+    for (size_t y = 0; y < bandwidth; y++)
         kernel[y][margin] = -1;
-    for (size_t x = 0; x < width; x++)
+    for (size_t x = 0; x < bandwidth; x++)
         kernel[margin][x] = -1;
     kernel[margin][margin] = 4 * margin;
     for (size_t y = 0; y < height; y++) {
@@ -472,12 +478,23 @@ void BandProcess::executeLaplacianBlur(Matrix& input,Matrix& output) const{
         if (y >= margin) ystart = y - margin;
         if (y < height - margin)   yterm = y + margin;
         for (size_t x = 0; x < width; x++){
+            if (input[y][x] == 0)
+                continue;
             size_t xstart = 0, xterm = width - 1;
             if (x >= margin) xstart = x - margin;
             if (x < height - margin)   xterm = x + margin;
-            for (size_t i = ystart; i < yterm; i++)
-                for (size_t j = xstart; j < xterm; x++)
-                    output[y][x] += input[i][j] * kernel[ystart - y + margin][xstart -x + margin];
+            double sum = 0.0;
+            for (size_t i = ystart; i <= yterm; i++){
+                for (size_t j = xstart; j <= xterm; j++){
+                    sum += input[i][j] * kernel[i - y + margin][j -x + margin];
+                    //std::cout<< input[i][j]<<' ';
+                }
+                //std::cout<<std::endl;
+            }
+            if (abs(sum) > SPECT_VALUE_RANGE - 1)
+                output[y][x] = SPECT_VALUE_RANGE - 1;
+            else
+                output[y][x] = static_cast<unsigned short>(abs(sum));
         }
     }
 }
@@ -503,37 +520,43 @@ void BandProcess::executeSobelBlur(Matrix& input,Matrix& output) const{
         if (y >= margin) ystart = y - margin;
         if (y < height - margin)   yterm = y + margin;
         for (size_t x = 0; x < width; x++){
+            if (input[y][x] == 0)
+                continue;
             size_t xstart = 0, xterm = width - 1;
             if (x >= margin) xstart = x - margin;
             if (x < height - margin)   xterm = x + margin;
             double sumX = 0.0, sumY = 0.0;
-            for (size_t i = ystart; i < yterm; i++)
-                for (size_t j = xstart; j < xterm; x++){
-                    sumX += input[i][j] * kernelx[ystart - y + margin][xstart -x + margin];
-                    sumY += input[i][j] * kernely[ystart - y + margin][xstart -x + margin];
+            for (size_t i = ystart; i <= yterm; i++)
+                for (size_t j = xstart; j <= xterm; j++){
+                    sumX += input[i][j] * kernelx[i - y + margin][j -x + margin];
+                    sumY += input[i][j] * kernely[i - y + margin][j -x + margin];
                 }
-            output[y][x] = std::sqrt(sumX * sumX + sumY * sumY);
+            double gredient = std::sqrt(sumX * sumX + sumY * sumY);
+            if (gredient > SPECT_VALUE_RANGE - 1)
+                output[y][x] = SPECT_VALUE_RANGE - 1;
+            else
+                output[y][x] = gredient;
         }
     }
 }
 void TextureManager::processBand(unsigned short* RGB,std::shared_ptr<Spectum> band, int bias, const std::vector<BandProcess>& processes){
     const int width = band->width,height = band->height;
-    if (processes.empty()){
-        for (int y = 0; y < height; y++)
-            for (int x = 0; x < width; x++){
-                int loc = y * width + x;
-                if (toAverage)
-                    RGB[loc * 3 + bias] = band->average(y,x);
-                else
-                    RGB[loc * 3 + bias] = band->strech(y,x);
-            }
+    for (int y = 0; y < height; y++)
+        for (int x = 0; x < width; x++){
+            int loc = y * width + x;
+            if (toAverage)
+                RGB[loc * 3 + bias] = band->average(y,x);
+            else
+                RGB[loc * 3 + bias] = band->strech(y,x);
+        }
+    if (processes.empty())
         return;
-    }
     std::vector<std::vector<unsigned short>> buffers[2];
     for (int y = 0; y < height; y++){
         std::vector<unsigned short> row1(width),row2(width);
         for (int x = 0; x < width; x++){
-            row1[x] = band->rawData[y][x];
+            int loc = y * width + x;
+            row1[x] = RGB[loc * 3 + bias];
             row2[x] = 0;
         }
         buffers[0].push_back(row1);
@@ -550,7 +573,7 @@ void TextureManager::processBand(unsigned short* RGB,std::shared_ptr<Spectum> ba
     for (int y = 0; y < height; y++)
         for (int x = 0; x < width; x++){
             int loc = y * width + x;
-            if (!swapbuffer)
+            if (swapbuffer)
                 RGB[loc * 3 + bias] = buffers[1][y][x];
             else
                 RGB[loc * 3 + bias] = buffers[0][y][x];
