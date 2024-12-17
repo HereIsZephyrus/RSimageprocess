@@ -888,15 +888,14 @@ void Image::generateClassifiedTexture(unsigned char *classified){
     glBindTexture(GL_TEXTURE_2D, 0);
 }
 static bool sortVertexCmp(const glm::vec2& a, const glm::vec2& b){
-    if (a.y < b.y)  return true;
-    if (a.x < b.x)  return true;
-    return false;
+    if (a.y != b.y) return a.y < b.y;
+    return a.x < b.x;
 }
 void ROI::getSortedVertex(std::vector<glm::vec2>& sorted,OGRCoordinateTransformation *transformation){
     for (int i = 0; i < vertexNum; i++){
         double lat = vertices[i * stride + 1], lon = vertices[i * stride];
         if (transformation->Transform(1, &lat, &lon))
-            sorted.push_back(glm::vec2(lon,lat));
+            sorted.push_back(glm::vec2(lat,lon));
     }
     std::sort(sorted.begin(),sorted.end(),sortVertexCmp);
 }

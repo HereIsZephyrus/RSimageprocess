@@ -241,34 +241,33 @@ void Layer::filterBands(){
 void Layer::TrainROI(){
     using ROIobject = ROIcollection::ROIobject;
     int label = 0;
+    const int pixelSize = std::stoi(parserRaster->projectionParams.at("GRID_CELL_SIZE_REFLECTIVE"));
     OGRCoordinateTransformation* transformation = parserVector->getTransformation();
     const std::vector<Band>& bands = raster->getBands();
     const int featureNum = static_cast<int>(bands.size());
     for (std::vector<ROIobject>::iterator collection = vector->roiCollection.begin(); collection != vector->roiCollection.end(); collection++){
         for (std::vector<std::shared_ptr<ROI>>::iterator part = collection->partition.begin(); part != collection->partition.end(); part++){
             std::vector<ScanLineEdge> edges;
-            ScanLineEdgeConstruct(edges,*part,transformation);
-            constexpr int staticNum = 50;
+            ScanLineEdgeConstruct(edges,*part,transformation,pixelSize);
             dataVec feature;
             feature.assign(featureNum, 0);
             int count = 0;
             for (std::vector<ScanLineEdge>::iterator edge = edges.begin(); edge != edges.end(); edge++){
                 int left = static_cast<int>(edge->left), right = static_cast<int>(edge->right);
-                for (int x = left; x <= right ; x++){
+                for (int x = left; x <= right ; x+=pixelSize){
                     ++count;
-                    int indY = parserRaster->projection.downleft.y - edge->y, indX = edge->y - parserRaster->projection.downleft.x;
+                    int indY = (parserRaster->projection.upleft.y - edge->y) / pixelSize, indX = (x - parserRaster->projection.downleft.x) / pixelSize;
                     for (int i = 0; i < featureNum; i++){
                         if (raster->getToAverage())
-                            feature[i] += bands[i].value->average(indY, indX) / staticNum;
+                            feature[i] += bands[i].value->average(indY, indX);
                         else
-                            feature[i] += bands[i].value->strech(indY, indX) /staticNum;
-                    }
-                    if (count == staticNum){
-                        dataset.push_back(Sample(label, feature));
-                        count = 0;
+                            feature[i] += bands[i].value->strech(indY, indX);
                     }
                 }
             }
+            for (int i = 0; i < featureNum; i++)
+                feature[i] /= count;
+            dataset.push_back(Sample(label, feature));
         }
         ++label;
     }
@@ -344,9 +343,6 @@ void Layer::supervised(){
             ImGui::Text("请先训练样本!");
             if (ImGui::Button("训练")) {
                 TrainROI();
-                ClassifyImage(selectedItem);
-                gui::toShowSupervised = false;
-                ImGui::CloseCurrentPopup();
             }
             ImGui::SameLine();
             if (ImGui::Button("取消")) {
@@ -364,21 +360,23 @@ void Layer::supervised(){
                 }
                 ImGui::EndCombo();
             }
-            static char inputBuffer[10] = "";
-            ImGui::Text("分类数量:");
-            ImGui::SameLine();
-            ImGui::PushItemWidth(40);
-            ImGui::InputText("##input", inputBuffer, sizeof(inputBuffer),ImGuiInputTextFlags_CharsDecimal);
-            ImGui::PopItemWidth();
+            //static char inputBuffer[10] = "";
+            //ImGui::Text("分类数量:");
+            //ImGui::SameLine();
+            //ImGui::PushItemWidth(40);
+            //ImGui::InputText("##input", inputBuffer, //sizeof(inputBuffer),ImGuiInputTextFlags_CharsDecimal);
+            //ImGui::PopItemWidth();
             if (ImGui::Button("确认")) {
-                inputBuffer[0] = '\0';
+                //inputBuffer[0] = '\0';
+                ClassMapper& classMapper = ClassMapper::getClassMap();
+                classMapper.readMapper(vector->roiCollection);
                 ClassifyImage(selectedItem);
                 gui::toShowSupervised = false;
                 ImGui::CloseCurrentPopup();
             }
             ImGui::SameLine();
             if (ImGui::Button("取消")) {
-                inputBuffer[0] = '\0';
+                //inputBuffer[0] = '\0';
                 gui::toShowSupervised = false;
                 ImGui::CloseCurrentPopup();
             }
@@ -390,6 +388,7 @@ void Layer::supervised(){
 void Layer::importROI(std::shared_ptr<ROIparser> parser){
     std::vector<ClassType> collection = parser->getCollection();
     vector = std::make_unique<ROIcollection>();
+    parserVector = parser;
     for (std::vector<ClassType>::const_iterator element = collection.begin(); element != collection.end(); element++){
         ROIcollection::ROIobject newObj;
         newObj.name = element->name;

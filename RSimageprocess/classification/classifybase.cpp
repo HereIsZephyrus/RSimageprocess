@@ -25,11 +25,13 @@ void ClassMapper::generateRandomColorMap(int num){
         unsigned char b = static_cast<float>(rand() % 100) / 100 * 255;
         colorMap.push_back(glm::vec3(r,g,b));
     }
-    //ImGui::ColorEdit3(std::string("##Color" + nameMap[0]).c_str(), (float*)&colorMap[0]);
-    //for (int i = 1; i < num; i++){
-    //    ImGui::SameLine();
-    //    ImGui::ColorEdit3(std::string("##Color" + nameMap[i]).c_str(), (float*)&colorMap[i]);
-    //}
+}
+void ClassMapper::readMapper(const std::vector<ROIcollection::ROIobject>& roiCollection){
+    totalNum = static_cast<int>(roiCollection.size());
+    for (std::vector<ROIcollection::ROIobject>::const_iterator collection = roiCollection.begin(); collection != roiCollection.end(); collection++){
+        nameMap.push_back(collection->name);
+        colorMap.push_back(collection->color);
+    }
 }
 float Accuracy::getComprehensiveAccuracy(){
     float accuracy = 0.0f;
@@ -109,7 +111,7 @@ void Classifier::Classify(const std::vector<Band>& bands,unsigned char* classifi
                 float feature = 0;
                 int count = 0;
                 for (int i = y; i < y + margin; i++)
-                    for (int j = x; i < x + margin; j++){
+                    for (int j = x; j < x + margin; j++){
                         if (band->value->rawData[i][j] == 0)
                             continue;
                         feature += band->value->rawData[i][j];
@@ -118,7 +120,7 @@ void Classifier::Classify(const std::vector<Band>& bands,unsigned char* classifi
                 if (count == 0){
                     blankPixel = true;
                     for (int i = y; i < y + margin; i++)
-                        for (int j = x; i < x + margin; j++){
+                        for (int j = x; j < x + margin; j++){
                             int loc = i * width + j;
                             classified[loc * 3 + 0] = classMapper.blankColor.r;
                             classified[loc * 3 + 1] = classMapper.blankColor.g;
@@ -133,7 +135,7 @@ void Classifier::Classify(const std::vector<Band>& bands,unsigned char* classifi
             int label = Predict(dataFeatures);
             glm::vec3 color = classMapper.getColor(label);
             for (int i = y; i < y + margin; i++)
-                for (int j = x; i < x + margin; j++){
+                for (int j = x; j < x + margin; j++){
                     int loc = i * width + j;
                     classified[loc * 3 + 0] = color.r;
                     classified[loc * 3 + 1] = color.g;
@@ -165,7 +167,7 @@ void Classifier::Examine(const Dataset& samples){
         accuracy.f1[i] = 2 * precision * recall / (precision + recall);
     }
 }
-void ScanLineEdgeConstruct(std::vector<ScanLineEdge>& position,std::shared_ptr<ROI> part,OGRCoordinateTransformation *transformation){
+void ScanLineEdgeConstruct(std::vector<ScanLineEdge>& position,std::shared_ptr<ROI> part,OGRCoordinateTransformation *transformation,int pixelSize){
     std::vector<glm::vec2> sortedPos;
     part->getSortedVertex(sortedPos,transformation);
     
@@ -174,24 +176,52 @@ void ScanLineEdgeConstruct(std::vector<ScanLineEdge>& position,std::shared_ptr<R
     size_t vecPoint = 0;
     position.push_back(ScanLineEdge(minY, sortedPos[0].x,  sortedPos[0].x));
     std::pair<double,int> edge[2]; //slope + termY
-    edge[0] = std::make_pair((sortedPos[vecPoint + 1].y - sortedPos[vecPoint].y) / (sortedPos[vecPoint + 1].x - sortedPos[vecPoint].x),sortedPos[vecPoint + 1].y);
-    edge[1] = std::make_pair((sortedPos[vecPoint + 2].y - sortedPos[vecPoint].y) / (sortedPos[vecPoint + 2].x - sortedPos[vecPoint].x),sortedPos[vecPoint + 2].y);
-    int y = minY + 1;
+    if (abs(sortedPos[vecPoint + 1].y - sortedPos[vecPoint].y) < pixelSize){
+        edge[0] = std::make_pair(0,sortedPos[vecPoint + 1].y);
+        edge1X = sortedPos[vecPoint + 1].x;
+    }else
+        edge[0] = std::make_pair((sortedPos[vecPoint + 1].x - sortedPos[vecPoint].x) / (sortedPos[vecPoint + 1].y - sortedPos[vecPoint].y),sortedPos[vecPoint + 1].y);
+    if (abs(sortedPos[vecPoint + 2].y - sortedPos[vecPoint].y) < pixelSize){
+        edge[1] = std::make_pair(0,sortedPos[vecPoint + 2].y);
+        edge2X = sortedPos[vecPoint + 2].x;
+    }else
+        edge[1] = std::make_pair((sortedPos[vecPoint + 2].x - sortedPos[vecPoint].x) / (sortedPos[vecPoint + 2].y - sortedPos[vecPoint].y),sortedPos[vecPoint + 2].y);
+    int y = minY + pixelSize;
     while (vecPoint + 3 <= sortedPos.size()){
-        edge1X += edge[0].first;
-        edge2X += edge[1].first;
+        edge1X += edge[0].first * pixelSize;
+        edge2X += edge[1].first * pixelSize;
         if (edge1X <= edge2X)
             position.push_back(ScanLineEdge(y, edge1X, edge2X));
         else
-            position.push_back(ScanLineEdge(y, edge1X, edge2X));
-        ++y;
+            position.push_back(ScanLineEdge(y, edge2X, edge1X));
+        y += pixelSize;
         if (y > edge[0].second){
             ++vecPoint;
-            edge[0] = std::make_pair((sortedPos[vecPoint + 2].y - sortedPos[vecPoint].y) / (sortedPos[vecPoint + 2].x - sortedPos[vecPoint].x),sortedPos[vecPoint + 2].y);
+            if (vecPoint + 3 > sortedPos.size())
+                break;
+            if (abs(sortedPos[vecPoint + 2].y - sortedPos[vecPoint].y) < pixelSize){
+                edge[0] = std::make_pair(0, sortedPos[vecPoint + 2].y);
+                edge1X = sortedPos[vecPoint + 2].x;
+            }else
+                edge[0] = std::make_pair((sortedPos[vecPoint + 2].x - sortedPos[vecPoint].x) / (sortedPos[vecPoint + 2].y - sortedPos[vecPoint].y),sortedPos[vecPoint + 2].y);
         }
         if (y > edge[1].second){
             ++vecPoint;
-            edge[1] = std::make_pair((sortedPos[vecPoint + 2].y - sortedPos[vecPoint].y) / (sortedPos[vecPoint + 2].x - sortedPos[vecPoint].x),sortedPos[vecPoint + 2].y);
+            if (vecPoint + 3 > sortedPos.size())
+                break;
+            if (abs(sortedPos[vecPoint + 2].y - sortedPos[vecPoint].y) < pixelSize){
+                edge[1] = std::make_pair(0, sortedPos[vecPoint + 2].y);
+                edge2X = sortedPos[vecPoint + 2].x;
+            }else
+                edge[1] = std::make_pair((sortedPos[vecPoint + 2].x - sortedPos[vecPoint].x) / (sortedPos[vecPoint + 2].y - sortedPos[vecPoint].y),sortedPos[vecPoint + 2].y);
         }
+    }
+    for (; y < maxY; y += pixelSize){
+        edge1X += edge[0].first * pixelSize;
+        edge2X += edge[1].first * pixelSize;
+        if (edge1X <= edge2X)
+            position.push_back(ScanLineEdge(y, edge1X, edge2X));
+        else
+            position.push_back(ScanLineEdge(y, edge2X, edge1X));
     }
 }

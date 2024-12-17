@@ -43,6 +43,7 @@ public:
     void setTotalNum(int num){totalNum = num;}
     std::vector<std::string> nameMap;
     std::vector<glm::vec3> colorMap;
+    void readMapper(const std::vector<ROIcollection::ROIobject>& roiCollection);
 private:
     int totalNum;
     ClassMapper(){}
@@ -97,5 +98,5 @@ struct ScanLineEdge{
     double left,right;
     ScanLineEdge(int y,double left,double right):y(y),left(left),right(right){}
 };
-void ScanLineEdgeConstruct(std::vector<ScanLineEdge>& edges,std::shared_ptr<ROI> part,OGRCoordinateTransformation *transformation); //only for conv
+void ScanLineEdgeConstruct(std::vector<ScanLineEdge>& edges,std::shared_ptr<ROI> part,OGRCoordinateTransformation *transformation,int pixelSize); //only for conv
 #endif /* classifybase_hpp */
