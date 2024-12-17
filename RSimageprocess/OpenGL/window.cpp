@@ -108,6 +108,10 @@ bool DrawPopup(){
         ImportImage();
         return true;
     }
+    if (toImportROI){
+        ImportROI();
+        return true;
+    }
     if (toShowStatistic){
         ShowStatistic();
         return true;
@@ -217,6 +221,31 @@ void ImportImage(){
         if (ImGui::Button("取消")) {
             inputBuffer[0] = '\0';
             toImportImage = false;
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::EndPopup();
+    }
+    ImGui::PopFont();
+}
+void ImportROI(){
+    static char inputBuffer[256] = "";
+    ImGui::PushFont(gui::chineseFont);
+    ImGui::OpenPopup("Import ROI");
+    ImVec2 pos = ImGui::GetMainViewport()->GetCenter();
+    ImGui::SetNextWindowPos(pos);
+    if (ImGui::BeginPopup("Import ROI")) {
+        ImGui::Text("输入ROI的GeoJson文件");
+        ImGui::InputText("##input", inputBuffer, sizeof(inputBuffer));
+        if (ImGui::Button("确认")) {
+            ROIparser parser(inputBuffer);
+            inputBuffer[0] = '\0';
+            toImportROI = false;
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("取消")) {
+            inputBuffer[0] = '\0';
+            toImportROI = false;
             ImGui::CloseCurrentPopup();
         }
         ImGui::EndPopup();

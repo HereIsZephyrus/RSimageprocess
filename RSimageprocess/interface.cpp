@@ -10,10 +10,6 @@
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
 using std::vector;
-vector<Vertex> getImageExtent(std::string){
-    vector<Vertex> extent;
-    return extent;
-}
 void BundleParser::splitBundlePath(){
     size_t pos = mtlFilePath.find_last_of("/\\");
     if (pos != std::string::npos) {
@@ -199,4 +195,73 @@ void Landsat8BundleParser::readLocation(){
         }
     }
     mtlFile.close();
+}
+ROIparser::ROIparser(std::string filePath){
+    geographicSRS.SetWellKnownGeogCS("EPSG:4326");
+    projectionSPS.SetProjCS("UTM Zone 51N");
+    projectionSPS.SetWellKnownGeogCS("EPSG:4326");
+    projectionSPS.SetUTM(51, TRUE);
+    transformation = OGRCreateCoordinateTransformation(&geographicSRS, &projectionSPS);
+    if (transformation == nullptr) {
+            std::cerr << "Failed to create coordinate transformation." << std::endl;
+            return;
+        }
+    GDALDataset* dataset = (GDALDataset*) GDALOpenEx(filePath.c_str(), GDAL_OF_VECTOR, NULL, NULL, NULL);
+        if (dataset == nullptr) {
+            std::cerr << "Failed to open GeoJSON file." << std::endl;
+            return;
+        }
+        OGRLayer* layer = dataset->GetLayer(0);
+        if (layer == nullptr) {
+            std::cerr << "Failed to get layer." << std::endl;
+            GDALClose(dataset);
+            return;
+        }
+
+        OGRFeature* feature;
+        while ((feature = layer->GetNextFeature()) != nullptr) {
+            ClassType obj;
+            OGRGeometry* geometry = feature->GetGeometryRef();
+            if (geometry != nullptr && geometry->getGeometryType() == wkbGeometryCollection) {
+                OGRGeometryCollection* geomCollection = dynamic_cast<OGRGeometryCollection*>(geometry);
+                for (int i = 0; i < geomCollection->getNumGeometries(); ++i) {
+                    OGRGeometry* geom = geomCollection->getGeometryRef(i);
+                    std::vector<OGRPoint> objPosition;
+                    if (geom->getGeometryType() == wkbPolygon) {
+                        OGRPolygon* polygon = (OGRPolygon*) geom;
+                        OGRLinearRing* ring = polygon->getExteriorRing();
+                        if (ring != nullptr) {
+                            std::cout << "  Polygon " << i << " Coordinates: ";
+                            for (int j = 0; j < ring->getNumPoints(); ++j) {
+                                OGRPoint point;
+                                ring->getPoint(j, &point);
+                                objPosition.push_back(point);
+                                double x = point.getX(), y = point.getY();
+                                //if (transformation->Transform(1, &x, &y))
+//                                    std::cout << "[" << x << ", " << y << "] ";
+                            }
+                            //std::cout << std::endl;
+                        }
+                    }
+                    obj.position.push_back(objPosition);
+                }
+            }
+            obj.name = feature->GetFieldAsString("name");
+            obj.color = splitColor(feature->GetFieldAsString("color"));
+            OGRFeature::DestroyFeature(feature);
+        }
+        GDALClose(dataset);
+}
+glm::vec3 ROIparser::splitColor(std::string colorStr){
+    glm::vec3 color;
+    std::string trimmed = colorStr.substr(3, colorStr.size() - 4);
+    std::stringstream ss(trimmed);
+    std::string item;
+    std::getline(ss, item, ',');
+    color.r = std::stoi(item);
+    std::getline(ss, item, ',');
+    color.g = std::stoi(item);
+    std::getline(ss, item, ',');
+    color.b = std::stoi(item);
+    return color;
 }

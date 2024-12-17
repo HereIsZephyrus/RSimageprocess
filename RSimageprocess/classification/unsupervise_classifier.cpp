@@ -134,9 +134,9 @@ void ISODATA::Classify(const std::vector<Band>& bands, bool toAverage, unsigned 
                 useColor = classMapper.blankColor;
             else
                 useColor = classMapper.colorMap[labels[count++]];
-            classified[loc * 3 + 0] = useColor.r * 255;
-            classified[loc * 3 + 0] = useColor.g * 255;
-            classified[loc * 3 + 0] = useColor.b * 255;
+            classified[loc * 3 + 0] = useColor.r;
+            classified[loc * 3 + 0] = useColor.g;
+            classified[loc * 3 + 0] = useColor.b;
         }
 }
 

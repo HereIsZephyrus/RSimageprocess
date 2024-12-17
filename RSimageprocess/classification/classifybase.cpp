@@ -19,9 +19,9 @@ void ClassMapper::generateRandomColorMap(int num){
         nameMap.push_back(name.c_str());
     }
     for (int i = 0; i < num; i++){
-        float r = static_cast<float>(rand() % 100) / 100;
-        float g = static_cast<float>(rand() % 100) / 100;
-        float b = static_cast<float>(rand() % 100) / 100;
+        unsigned char r = static_cast<float>(rand() % 100) / 100 * 255;
+        unsigned char g = static_cast<float>(rand() % 100) / 100 * 255;
+        unsigned char b = static_cast<float>(rand() % 100) / 100 * 255;
         colorMap.push_back(glm::vec3(r,g,b));
     }
     //ImGui::ColorEdit3(std::string("##Color" + nameMap[0]).c_str(), (float*)&colorMap[0]);

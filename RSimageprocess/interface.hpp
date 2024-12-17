@@ -7,6 +7,12 @@
 
 #ifndef interface_hpp
 #define interface_hpp
+#include <gdal.h>
+#include <gdal_priv.h>
+#include <gdal_utils.h>
+#include <ogrsf_frmts.h>
+#include <ogr_api.h>
+#include <ogr_geometry.h>
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -16,7 +22,6 @@
 #include <ogr_spatialref.h>
 #include "OpenGL/graphing.hpp"
 using std::vector;
-vector<Vertex> getImageExtent(std::string);
 struct Range{
     glm::vec2 upleft,upright,downleft,downright;
 };
@@ -37,7 +42,6 @@ public:
     std::unordered_map<int, std::string> TIFFpathParser;
     std::unordered_map<std::string, std::string> projectionParams;
     Range geographic,projection;
-    OGRSpatialReference sourceSRS, targetSRS;
 };
 class Landsat8BundleParser : public BundleParser{
     void readTIffPath() override;
@@ -63,4 +67,20 @@ public:
     }
 };
 typedef std::shared_ptr<BundleParser> pParser;
+class ROIparser{
+    struct ClassType{
+        std::vector<std::vector<OGRPoint>> position;
+        std::string name;
+        glm::vec3 color;
+    };
+    OGRSpatialReference geographicSRS, projectionSPS;
+    OGRCoordinateTransformation *transformation;
+    std::vector<ClassType> elements;
+    glm::vec3 splitColor(std::string colorStr);
+    ~ROIparser(){
+        OGRCoordinateTransformation::DestroyCT(coordTransform);
+    }
+public:
+    explicit ROIparser(std::string filePath);
+};
 #endif /* interface_hpp */

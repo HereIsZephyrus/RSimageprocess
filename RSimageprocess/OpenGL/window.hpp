@@ -59,6 +59,7 @@ bool DrawPopup();
 void RenderLayerTree();
 void RenderWorkspace();
 void ImportImage();
+void ImportROI();
 void ShowStatistic();
 void ManageBands();
 void ChooseStrechLevel();
