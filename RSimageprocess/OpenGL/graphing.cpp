@@ -74,11 +74,7 @@ void Shader::linkProgram(){
     }
 }
 
-Spectum::Spectum(unsigned short* flatd,int w,int h):width(w),height(h){
-    validRange[0].x  = width + 1; // left
-    validRange[1].x = 0; // right
-    validRange[2].x  = height + 1; // botton
-    validRange[3].x = 0; // top
+Spectum::Spectum(unsigned short* flatd,int w,int h):width(w),height(h){\
     if (width % 2) width--;
     if (height%2)height--;
     rawData = new unsigned short*[height];
@@ -98,22 +94,6 @@ Spectum::Spectum(unsigned short* flatd,int w,int h):width(w),height(h){
                 continue;
             if (minVal > rawData[y][x]) minVal = rawData[y][x];
             if (minVal < rawData[y][x]) maxVal = rawData[y][x];
-            if (x < validRange[0].x){
-                validRange[0].x = x;
-                validRange[0].y = y;
-            }
-            if (x > validRange[1].x){
-                validRange[1].x = x;
-                validRange[1].y = y;
-            }
-            if (y < validRange[2].y){
-                validRange[2].x = x;
-                validRange[2].y = y;
-            }
-            if (y > validRange[3].y){
-                validRange[3].x = x;
-                validRange[3].y = y;
-            }
         }
     }
     totalPixel = width * height - counting[0];
@@ -126,18 +106,10 @@ Spectum::Spectum(unsigned short* flatd,int w,int h):width(w),height(h){
         counting[val] = counting[val-1] + counting[val];
         CDF[val] = static_cast<double>(counting[val]) / totalPixel;
     }
-    strechRange.first = 0; strechRange.second = SPECT_VALUE_RANGE - 1;
-    for (int i = 0; i < 3; i++){
-        validRange[i].x /= width;
-        validRange[i].y /= height;
-    }
+    strechRange.first = 0; strechRange.second = SPECT_VALUE_RANGE - 1;\
 }
 Spectum::Spectum(const cv::Mat& image){
-    width = image.cols; height = image.rows;
-    validRange[0].x  = width + 1; // left
-    validRange[1].y = 0; // top
-    validRange[2].x = 0; // right
-    validRange[3].y  = height + 1; // botton
+    width = image.cols; height = image.rows;\
     if (width % 2) width--;
     if (height%2)height--;
     rawData = new unsigned short*[height];
@@ -157,22 +129,6 @@ Spectum::Spectum(const cv::Mat& image){
                 continue;
             if (minVal > rawData[y][x]) minVal = rawData[y][x];
             if (minVal < rawData[y][x]) maxVal = rawData[y][x];
-            if (x < validRange[0].x){
-                validRange[0].x = x;
-                validRange[0].y = y;
-            }
-            if (y > validRange[1].y){
-                validRange[1].x = x;
-                validRange[1].y = y;
-            }
-            if (x > validRange[2].x){
-                validRange[2].x = x;
-                validRange[2].y = y;
-            }
-            if (y < validRange[3].y){
-                validRange[3].x = x;
-                validRange[3].y = y;
-            }
         }
     }
     totalPixel = width * height - counting[0];
@@ -185,10 +141,6 @@ Spectum::Spectum(const cv::Mat& image){
         CDF[val] = static_cast<double>(counting[val]) / totalPixel;
     }
     strechRange.first = 0; strechRange.second = SPECT_VALUE_RANGE - 1;
-    for (int i = 0; i < 4; i++){
-        validRange[i].x /= width;
-        validRange[i].y /= height;
-    }
 }
 unsigned short Spectum::average(int y,int x){
     return static_cast<unsigned short>(CDF[rawData[y][x]] * (SPECT_VALUE_RANGE - 1));
@@ -343,8 +295,14 @@ void Primitive::update(){
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindVertexArray(0);
 }
-Texture::Texture(const std::vector<glm::vec3>& position, const std::vector<glm::vec2>& location, GLuint textureID,bool useRGB):
+Texture::Texture(const std::vector<glm::vec3>& position, GLuint textureID,bool useRGB):
 textureID(textureID),shape(GL_TRIANGLE_FAN){
+    std::array<glm::vec2, 4> location{
+        glm::vec2(0.0,1.0),
+        glm::vec2(1.0,1.0),
+        glm::vec2(1.0,0.0),
+        glm::vec2(0.0,0.0),
+    };
     if (useRGB)
         shader = ShaderBucket["RGB"].get();
     else
@@ -903,12 +861,9 @@ void Image::generateTexture(const std::vector<BandProcess>& processes){
     }
     glGenerateMipmap(GL_TEXTURE_2D);
     std::vector<glm::vec3> position;
-    std::vector<glm::vec2> texturePos;
-    for (int index = 0; index < vertexNum ; index++){
-        position.push_back(glm::vec3(vertices[index * stride],vertices[index * stride + 1],vertices[index * stride + 2]));
-        texturePos.push_back(bands[0].value->validRange[index]);
-    }
-    std::shared_ptr<Texture> texture = std::make_shared<Texture>(position,texturePos,textureID,textureManager.useRGB);
+    for (int index = 0; index < vertexNum ; index++)
+            position.push_back(glm::vec3(vertices[index * stride],vertices[index * stride + 1],vertices[index * stride + 2]));
+    std::shared_ptr<Texture> texture = std::make_shared<Texture>(position,textureID,textureManager.useRGB);
     textureManager.createtexture(texture);
     glBindTexture(GL_TEXTURE_2D, 0);
 }
@@ -925,12 +880,9 @@ void Image::generateClassifiedTexture(unsigned char *classified){
     delete[] classified;
     glGenerateMipmap(GL_TEXTURE_2D);
     std::vector<glm::vec3> position;
-    std::vector<glm::vec2> texturePos;
-    for (int index = 0; index < vertexNum ; index++){
-        position.push_back(glm::vec3(vertices[index * stride],vertices[index * stride + 1],vertices[index * stride + 2]));
-        texturePos.push_back(bands[0].value->validRange[index]);
-    }
-    std::shared_ptr<Texture> texture = std::make_shared<Texture>(position,texturePos,textureID,textureManager.useRGB);
+    for (int index = 0; index < vertexNum ; index++)
+            position.push_back(glm::vec3(vertices[index * stride],vertices[index * stride + 1],vertices[index * stride + 2]));
+    std::shared_ptr<Texture> texture = std::make_shared<Texture>(position,textureID,textureManager.useRGB);
     textureManager.createtexture(texture);
     glBindTexture(GL_TEXTURE_2D, 0);
 }

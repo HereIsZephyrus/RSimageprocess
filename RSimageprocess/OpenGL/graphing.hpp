@@ -35,7 +35,7 @@ struct Spectum{
     unsigned short maxVal,minVal;
     int width,height,totalPixel;
     double mean;
-    glm::vec2 validRange[4];
+    //glm::vec2 validRange[4];
     Spectum(unsigned short* flatd,int w,int h); //deprecated at this time
     Spectum(const cv::Mat& image);
     SpectumRange strechRange;
@@ -95,7 +95,7 @@ protected:
 };
 class Texture{
 public:
-    Texture(const std::vector<glm::vec3>& position, const std::vector<glm::vec2>& texturePos, GLuint textureID,bool useRGB);
+    Texture(const std::vector<glm::vec3>& position, GLuint textureID,bool useRGB);
     Texture(const Texture&) = delete;
     void operator=(const Texture&) = delete;
     ~Texture(){
