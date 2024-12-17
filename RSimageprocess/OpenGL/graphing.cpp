@@ -8,6 +8,7 @@
 #include <fstream>
 #include <sstream>
 #include <iostream>
+#include <algorithm>
 #include <gdal.h>
 #include <gdal_priv.h>
 #include "graphing.hpp"
@@ -885,6 +886,19 @@ void Image::generateClassifiedTexture(unsigned char *classified){
     std::shared_ptr<Texture> texture = std::make_shared<Texture>(position,textureID,textureManager.useRGB);
     textureManager.createtexture(texture);
     glBindTexture(GL_TEXTURE_2D, 0);
+}
+static bool sortVertexCmp(const glm::vec2& a, const glm::vec2& b){
+    if (a.y < b.y)  return true;
+    if (a.x < b.x)  return true;
+    return false;
+}
+void ROI::getSortedVertex(std::vector<glm::vec2>& sorted,OGRCoordinateTransformation *transformation){
+    for (int i = 0; i < vertexNum; i++){
+        double lat = vertices[i * stride + 1], lon = vertices[i * stride];
+        if (transformation->Transform(1, &lat, &lon))
+            sorted.push_back(glm::vec2(lon,lat));
+    }
+    std::sort(sorted.begin(),sorted.end(),sortVertexCmp);
 }
 void ROIcollection::draw(){
     for (std::vector<ROIobject>::iterator roi = roiCollection.begin(); roi != roiCollection.end(); roi++)

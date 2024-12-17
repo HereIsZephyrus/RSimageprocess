@@ -235,11 +235,7 @@ ROIparser::ROIparser(std::string filePath){
                                 OGRPoint point;
                                 ring->getPoint(j, &point);
                                 objPosition.push_back(point);
-                                //double lon = point.getX(), lat = point.getY();
-                                //if (transformation->Transform(1, &lat, &lon))
-                                    //std::cout << "[" << lon << ", " << lat << "] ";
                             }
-                            std::cout << std::endl;
                         }
                     }
                     obj.position.push_back(objPosition);

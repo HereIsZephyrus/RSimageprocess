@@ -5,6 +5,7 @@
 //  Created by ChanningTong on 12/16/24.
 //
 
+#include <cmath>
 #include "classifybase.hpp"
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
@@ -162,5 +163,35 @@ void Classifier::Examine(const Dataset& samples){
         accuracy.precision[i] = precision;
         accuracy.recall[i] = recall;
         accuracy.f1[i] = 2 * precision * recall / (precision + recall);
+    }
+}
+void ScanLineEdgeConstruct(std::vector<ScanLineEdge>& position,std::shared_ptr<ROI> part,OGRCoordinateTransformation *transformation){
+    std::vector<glm::vec2> sortedPos;
+    part->getSortedVertex(sortedPos,transformation);
+    
+    int minY = static_cast<int>(sortedPos.front().y), maxY = static_cast<int>(sortedPos.back().y);
+    int edge1X = sortedPos[0].x,edge2X = sortedPos[0].x;
+    size_t vecPoint = 0;
+    position.push_back(ScanLineEdge(minY, sortedPos[0].x,  sortedPos[0].x));
+    std::pair<double,int> edge[2]; //slope + termY
+    edge[0] = std::make_pair((sortedPos[vecPoint + 1].y - sortedPos[vecPoint].y) / (sortedPos[vecPoint + 1].x - sortedPos[vecPoint].x),sortedPos[vecPoint + 1].y);
+    edge[1] = std::make_pair((sortedPos[vecPoint + 2].y - sortedPos[vecPoint].y) / (sortedPos[vecPoint + 2].x - sortedPos[vecPoint].x),sortedPos[vecPoint + 2].y);
+    int y = minY + 1;
+    while (vecPoint + 3 <= sortedPos.size()){
+        edge1X += edge[0].first;
+        edge2X += edge[1].first;
+        if (edge1X <= edge2X)
+            position.push_back(ScanLineEdge(y, edge1X, edge2X));
+        else
+            position.push_back(ScanLineEdge(y, edge1X, edge2X));
+        ++y;
+        if (y > edge[0].second){
+            ++vecPoint;
+            edge[0] = std::make_pair((sortedPos[vecPoint + 2].y - sortedPos[vecPoint].y) / (sortedPos[vecPoint + 2].x - sortedPos[vecPoint].x),sortedPos[vecPoint + 2].y);
+        }
+        if (y > edge[1].second){
+            ++vecPoint;
+            edge[1] = std::make_pair((sortedPos[vecPoint + 2].y - sortedPos[vecPoint].y) / (sortedPos[vecPoint + 2].x - sortedPos[vecPoint].x),sortedPos[vecPoint + 2].y);
+        }
     }
 }

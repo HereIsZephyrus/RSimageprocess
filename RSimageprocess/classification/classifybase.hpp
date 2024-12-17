@@ -92,4 +92,10 @@ public:
     virtual void Train(const Dataset &dataset) = 0;
     virtual int Predict(const dataVec& x) = 0;
 };
+struct ScanLineEdge{
+    int y;
+    double left,right;
+    ScanLineEdge(int y,double left,double right):y(y),left(left),right(right){}
+};
+void ScanLineEdgeConstruct(std::vector<ScanLineEdge>& edges,std::shared_ptr<ROI> part,OGRCoordinateTransformation *transformation); //only for conv
 #endif /* classifybase_hpp */

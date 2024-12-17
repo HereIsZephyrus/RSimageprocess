@@ -78,5 +78,6 @@ public:
         OGRCoordinateTransformation::DestroyCT(transformation);
     }
     const std::vector<ClassType>& getCollection(){return elements;}
+    OGRCoordinateTransformation* getTransformation(){return transformation;}
 };
 #endif /* interface_hpp */

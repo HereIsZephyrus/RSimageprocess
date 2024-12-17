@@ -22,6 +22,7 @@
 #include "graphing.hpp"
 #include "camera.hpp"
 #include "../interface.hpp"
+#include "../classification/classifybase.hpp"
 
 enum class ClassifierType{
     fisher,
@@ -39,8 +40,10 @@ class Layer{
     std::shared_ptr<ROIparser> parserVector;
     std::string name;
     bool visble;
+    std::vector<Sample> dataset;
     std::string getFileName(std::string resourcePath);
     std::string getIndicator(int index){return raster->getIndicator(index);}
+    void TrainROI();
 public:
     friend LayerManager;
     Layer(std::string layerName,std::string resourcePath):

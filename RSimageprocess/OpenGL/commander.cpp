@@ -59,10 +59,15 @@ bool Layer::BuildLayerStack(){
     const ImGuiTreeNodeFlags propertyFlag = ImGuiTreeNodeFlags_Leaf;
     bool clicked = false;
     if (vector != nullptr){
-        if (ImGui::TreeNodeEx("vector", propertyFlag)){
-            ImGui::TreePop();
-            if (ImGui::IsItemClicked())
-                clicked = true;
+        for (std::vector<ROIcollection::ROIobject>::const_iterator collection = vector->roiCollection.begin(); collection != vector->roiCollection.end(); collection++){
+            float color[3] = {collection->color.r / 255,collection->color.g / 255,collection->color.b / 255};
+            ImGui::ColorEdit3(std::string("##" + collection->name).c_str(), color, ImGuiColorEditFlags_NoInputs);
+            ImGui::SameLine();
+            if (ImGui::TreeNodeEx(collection->name.c_str(), propertyFlag)){
+                ImGui::TreePop();
+                if (ImGui::IsItemClicked())
+                    clicked = true;
+            }
         }
     }
     if (raster != nullptr){
@@ -233,6 +238,41 @@ void Layer::filterBands(){
         ImGui::EndPopup();
     }
 }
+void Layer::TrainROI(){
+    using ROIobject = ROIcollection::ROIobject;
+    int label = 0;
+    OGRCoordinateTransformation* transformation = parserVector->getTransformation();
+    const std::vector<Band>& bands = raster->getBands();
+    const int featureNum = static_cast<int>(bands.size());
+    for (std::vector<ROIobject>::iterator collection = vector->roiCollection.begin(); collection != vector->roiCollection.end(); collection++){
+        for (std::vector<std::shared_ptr<ROI>>::iterator part = collection->partition.begin(); part != collection->partition.end(); part++){
+            std::vector<ScanLineEdge> edges;
+            ScanLineEdgeConstruct(edges,*part,transformation);
+            constexpr int staticNum = 50;
+            dataVec feature;
+            feature.assign(featureNum, 0);
+            int count = 0;
+            for (std::vector<ScanLineEdge>::iterator edge = edges.begin(); edge != edges.end(); edge++){
+                int left = static_cast<int>(edge->left), right = static_cast<int>(edge->right);
+                for (int x = left; x <= right ; x++){
+                    ++count;
+                    int indY = parserRaster->projection.downleft.y - edge->y, indX = edge->y - parserRaster->projection.downleft.x;
+                    for (int i = 0; i < featureNum; i++){
+                        if (raster->getToAverage())
+                            feature[i] += bands[i].value->average(indY, indX) / staticNum;
+                        else
+                            feature[i] += bands[i].value->strech(indY, indX) /staticNum;
+                    }
+                    if (count == staticNum){
+                        dataset.push_back(Sample(label, feature));
+                        count = 0;
+                    }
+                }
+            }
+        }
+        ++label;
+    }
+}
 void Layer::unsupervised(){
     using methodStrMap = std::unordered_map<ClassifierType,std::string>;
     static const methodStrMap methodList{
@@ -294,33 +334,54 @@ void Layer::supervised(){
     static ClassifierType selectedItem = ClassifierType::rf;
     if (ImGui::BeginPopup("Supervised")){
         ImGui::PushFont(gui::chineseFont);
-        if (ImGui::BeginCombo("选择一种方式", methodList.at(selectedItem).c_str())) {
-            for (methodStrMap::const_iterator method = methodList.begin(); method != methodList.end(); method++){
-                bool isSelected = (selectedItem == method->first);
-                if (ImGui::Selectable(method->second.c_str(), isSelected))
-                    selectedItem = method->first;
-                if (isSelected)
-                    ImGui::SetItemDefaultFocus();
+        if (vector == nullptr){
+            ImGui::Text("请先导入ROI文件!");
+            if (ImGui::Button("取消")) {
+                gui::toShowSupervised = false;
+                ImGui::CloseCurrentPopup();
             }
-            ImGui::EndCombo();
-        }
-        static char inputBuffer[10] = "";
-        ImGui::Text("分类数量:");
-        ImGui::SameLine();
-        ImGui::PushItemWidth(40);
-        ImGui::InputText("##input", inputBuffer, sizeof(inputBuffer),ImGuiInputTextFlags_CharsDecimal);
-        ImGui::PopItemWidth();
-        if (ImGui::Button("确认")) {
-            inputBuffer[0] = '\0';
-            ClassifyImage(selectedItem);
-            gui::toShowUnsupervised = false;
-            ImGui::CloseCurrentPopup();
-        }
-        ImGui::SameLine();
-        if (ImGui::Button("取消")) {
-            inputBuffer[0] = '\0';
-            gui::toShowUnsupervised = false;
-            ImGui::CloseCurrentPopup();
+        }else if (dataset.empty()){
+            ImGui::Text("请先训练样本!");
+            if (ImGui::Button("训练")) {
+                TrainROI();
+                ClassifyImage(selectedItem);
+                gui::toShowSupervised = false;
+                ImGui::CloseCurrentPopup();
+            }
+            ImGui::SameLine();
+            if (ImGui::Button("取消")) {
+                gui::toShowSupervised = false;
+                ImGui::CloseCurrentPopup();
+            }
+        }else{
+            if (ImGui::BeginCombo("选择一种方式", methodList.at(selectedItem).c_str())) {
+                for (methodStrMap::const_iterator method = methodList.begin(); method != methodList.end(); method++){
+                    bool isSelected = (selectedItem == method->first);
+                    if (ImGui::Selectable(method->second.c_str(), isSelected))
+                        selectedItem = method->first;
+                    if (isSelected)
+                        ImGui::SetItemDefaultFocus();
+                }
+                ImGui::EndCombo();
+            }
+            static char inputBuffer[10] = "";
+            ImGui::Text("分类数量:");
+            ImGui::SameLine();
+            ImGui::PushItemWidth(40);
+            ImGui::InputText("##input", inputBuffer, sizeof(inputBuffer),ImGuiInputTextFlags_CharsDecimal);
+            ImGui::PopItemWidth();
+            if (ImGui::Button("确认")) {
+                inputBuffer[0] = '\0';
+                ClassifyImage(selectedItem);
+                gui::toShowSupervised = false;
+                ImGui::CloseCurrentPopup();
+            }
+            ImGui::SameLine();
+            if (ImGui::Button("取消")) {
+                inputBuffer[0] = '\0';
+                gui::toShowSupervised = false;
+                ImGui::CloseCurrentPopup();
+            }
         }
         ImGui::PopFont();
         ImGui::EndPopup();
@@ -371,8 +432,8 @@ void Layer::ClassifyImage(ClassifierType classifierType){
         }
         if (classifier == nullptr)
             return;
-        //classifier->Train(<#const Dataset &dataset#>);
-        //classifier->Classify(<#const std::vector<Band> &bands#>, classified);
+        classifier->Train(dataset);
+        classifier->Classify(raster->getBands(), classified);
         //classifier->Examine(<#const Dataset &samples#>);
     }
     raster->deleteTexture();
