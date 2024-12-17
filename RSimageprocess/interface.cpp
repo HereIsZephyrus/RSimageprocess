@@ -197,10 +197,10 @@ void Landsat8BundleParser::readLocation(){
     mtlFile.close();
 }
 ROIparser::ROIparser(std::string filePath){
-    geographicSRS.SetWellKnownGeogCS("EPSG:4326");
-    projectionSPS.SetProjCS("UTM Zone 51N");
-    projectionSPS.SetWellKnownGeogCS("EPSG:4326");
-    projectionSPS.SetUTM(51, TRUE);
+    geographicSRS.importFromEPSG(4326);
+    //projectionSPS.SetProjCS("UTM Zone 51N");
+    projectionSPS.importFromEPSG(32651);
+    //projectionSPS.SetUTM(51, TRUE);
     transformation = OGRCreateCoordinateTransformation(&geographicSRS, &projectionSPS);
     if (transformation == nullptr) {
             std::cerr << "Failed to create coordinate transformation." << std::endl;
@@ -231,16 +231,15 @@ ROIparser::ROIparser(std::string filePath){
                         OGRPolygon* polygon = (OGRPolygon*) geom;
                         OGRLinearRing* ring = polygon->getExteriorRing();
                         if (ring != nullptr) {
-                            //std::cout << "  Polygon " << i << " Coordinates: ";
                             for (int j = 0; j < ring->getNumPoints(); ++j) {
                                 OGRPoint point;
                                 ring->getPoint(j, &point);
                                 objPosition.push_back(point);
-                                double x = point.getX(), y = point.getY();
-                                //if (transformation->Transform(1, &x, &y))
-//                                    std::cout << "[" << x << ", " << y << "] ";
+                                //double lon = point.getX(), lat = point.getY();
+                                //if (transformation->Transform(1, &lat, &lon))
+                                    //std::cout << "[" << lon << ", " << lat << "] ";
                             }
-                            //std::cout << std::endl;
+                            std::cout << std::endl;
                         }
                     }
                     obj.position.push_back(objPosition);
