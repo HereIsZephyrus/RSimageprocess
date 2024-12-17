@@ -231,7 +231,7 @@ ROIparser::ROIparser(std::string filePath){
                         OGRPolygon* polygon = (OGRPolygon*) geom;
                         OGRLinearRing* ring = polygon->getExteriorRing();
                         if (ring != nullptr) {
-                            std::cout << "  Polygon " << i << " Coordinates: ";
+                            //std::cout << "  Polygon " << i << " Coordinates: ";
                             for (int j = 0; j < ring->getNumPoints(); ++j) {
                                 OGRPoint point;
                                 ring->getPoint(j, &point);
@@ -248,6 +248,7 @@ ROIparser::ROIparser(std::string filePath){
             }
             obj.name = feature->GetFieldAsString("name");
             obj.color = splitColor(feature->GetFieldAsString("color"));
+            elements.push_back(obj);
             OGRFeature::DestroyFeature(feature);
         }
         GDALClose(dataset);

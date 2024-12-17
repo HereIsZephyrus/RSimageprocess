@@ -65,16 +65,18 @@ bool Layer::BuildLayerStack(){
                 clicked = true;
         }
     }
-    const std::vector<Band>& bands = raster->getBands();
-    int counter = 0;
-    for (std::vector<Band>::const_reverse_iterator band = bands.rbegin(); band != bands.rend(); band++){
-        std::ostringstream nameOS;
-        std::string bandIndicator = getIndicator(counter);
-        nameOS<<"band"<<++counter<<std::setprecision(1)<<":"<<band->wavelength<<"mm"<<bandIndicator;
-        if (ImGui::TreeNodeEx(nameOS.str().c_str(), propertyFlag)){
-            ImGui::TreePop();
-            if (ImGui::IsItemClicked())
-                clicked = true;
+    if (raster != nullptr){
+        const std::vector<Band>& bands = raster->getBands();
+        int counter = 0;
+        for (std::vector<Band>::const_reverse_iterator band = bands.rbegin(); band != bands.rend(); band++){
+            std::ostringstream nameOS;
+            std::string bandIndicator = getIndicator(counter);
+            nameOS<<"band"<<++counter<<std::setprecision(1)<<":"<<band->wavelength<<"mm"<<bandIndicator;
+            if (ImGui::TreeNodeEx(nameOS.str().c_str(), propertyFlag)){
+                ImGui::TreePop();
+                if (ImGui::IsItemClicked())
+                    clicked = true;
+            }
         }
     }
     return clicked;
@@ -89,7 +91,7 @@ void Layer::showStatistic() const{
         ImGuiStyle& style = ImGui::GetStyle();
         style.ItemSpacing = ImVec2(16.0f, 8.0f);
         ImGui::Text("<影像元信息>");
-        parser->ShowInfo();
+        parserRaster->ShowInfo();
         ImGui::Text("<波段相关系数>");
         raster->showBandCoefficient();
         ImGui::Text("<波段信息>");
@@ -281,7 +283,6 @@ void Layer::unsupervised(){
 void Layer::supervised(){
     using methodStrMap = std::unordered_map<ClassifierType,std::string>;
     static const methodStrMap methodList{
-        {ClassifierType::naiveBayes,"朴素Bayes"},
         {ClassifierType::fisher,"Fisher"},
         {ClassifierType::svm,"SVM"},
         {ClassifierType::bp,"BP"},
@@ -325,6 +326,23 @@ void Layer::supervised(){
         ImGui::EndPopup();
     }
 }
+void Layer::importROI(std::shared_ptr<ROIparser> parser){
+    std::vector<ClassType> collection = parser->getCollection();
+    vector = std::make_unique<ROIcollection>();
+    for (std::vector<ClassType>::const_iterator element = collection.begin(); element != collection.end(); element++){
+        ROIcollection::ROIobject newObj;
+        newObj.name = element->name;
+        newObj.color = element->color;
+        for (std::vector<std::vector<OGRPoint>>::const_iterator pos = element->position.begin(); pos != element->position.end(); pos++){
+            std::vector<Vertex> inputVertex;
+            for (std::vector<OGRPoint>::const_iterator loc = pos->begin(); loc != pos->end(); loc++)
+                inputVertex.push_back(Vertex(glm::vec3(loc->getX(),loc->getY(),0.0),newObj.color));
+            std::shared_ptr<ROI> newROI = std::make_shared<ROI>(inputVertex);
+            newObj.partition.push_back(newROI);
+        }
+        vector->roiCollection.push_back(newObj);
+    }
+}
 void Layer::ClassifyImage(ClassifierType classifierType){
     unsigned char* classified = nullptr;
     ClassMapper& classMapper = ClassMapper::getClassMap();
@@ -336,9 +354,6 @@ void Layer::ClassifyImage(ClassifierType classifierType){
     }else{
         std::shared_ptr<Classifier> classifier = nullptr;
         switch (classifierType) {
-            case ClassifierType::naiveBayes:
-                classifier = std::make_shared<NaiveBayesClassifier>();
-                break;
             case ClassifierType::fisher:
                 classifier = std::make_shared<FisherClassifier>();
                 break;
@@ -381,7 +396,7 @@ void LayerManager::importlayer(std::shared_ptr<BundleParser> parser){
         {glm::vec3(parser->geographic.upleft.x,parser->geographic.upleft.y,0.0),glm::vec3(1.0,1.0,1.0)},
     };
     pLayer newLayer = std::make_shared<Layer>(parser->getFileIdentifer(),faceVertices);
-    newLayer->parser = parser;
+    newLayer->parserRaster = parser;
     std::unique_ptr<Image>& image = newLayer->raster;
     for (std::unordered_map<int, std::string>::iterator rasterInfo = parser->TIFFpathParser.begin(); rasterInfo != parser->TIFFpathParser.end(); rasterInfo++){
         std::string imagePath = parser->getBundlePath() + "/" + rasterInfo->second;

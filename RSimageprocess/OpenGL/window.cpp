@@ -237,7 +237,11 @@ void ImportROI(){
         ImGui::Text("输入ROI的GeoJson文件");
         ImGui::InputText("##input", inputBuffer, sizeof(inputBuffer));
         if (ImGui::Button("确认")) {
-            ROIparser parser(inputBuffer);
+            std::shared_ptr<ROIparser> parser = std::make_shared<ROIparser>(inputBuffer);
+            BufferRecorder& buffer = BufferRecorder::getBuffer();
+            if (buffer.selectedLayer != nullptr){
+                buffer.selectedLayer->importROI(parser);
+            }
             inputBuffer[0] = '\0';
             toImportROI = false;
             ImGui::CloseCurrentPopup();

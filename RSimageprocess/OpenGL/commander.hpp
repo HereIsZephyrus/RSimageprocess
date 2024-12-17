@@ -24,7 +24,6 @@
 #include "../interface.hpp"
 
 enum class ClassifierType{
-    naiveBayes,
     fisher,
     svm,
     bp,
@@ -36,7 +35,8 @@ class LayerManager;
 class Layer{
     std::unique_ptr<Image> raster;
     std::unique_ptr<ROIcollection> vector;
-    std::shared_ptr<BundleParser> parser;
+    std::shared_ptr<BundleParser> parserRaster;
+    std::shared_ptr<ROIparser> parserVector;
     std::string name;
     bool visble;
     std::string getFileName(std::string resourcePath);
@@ -44,12 +44,13 @@ class Layer{
 public:
     friend LayerManager;
     Layer(std::string layerName,std::string resourcePath):
-    name(layerName),prev(nullptr),next(nullptr),visble(true),raster(nullptr),parser(nullptr){
-        vector = std::make_unique<ROIcollection>(resourcePath);
+    name(layerName),prev(nullptr),next(nullptr),visble(true),raster(nullptr),parserRaster(nullptr),parserVector(nullptr){
+        //vector = std::make_unique<ROIcollection>(resourcePath);
     }
     Layer(std::string layerName, const std::vector<Vertex>& vertices):
-    name(layerName),prev(nullptr),next(nullptr),visble(true),vector(nullptr),parser(nullptr){
+    name(layerName),prev(nullptr),next(nullptr),visble(true),vector(nullptr),parserRaster(nullptr),parserVector(nullptr){
         raster = std::make_unique<Image>(vertices);
+        //vector = std::make_unique<ROIcollection>();
     }
     void draw();
     bool BuildLayerStack();
@@ -60,9 +61,10 @@ public:
     void toggleVisble() {visble = !visble;}
     void showStatistic() const;
     void exportImage() const{
-        std::string filePath = parser->getBundlePath() + '/' + parser->getFileIdentifer() + raster->getTextureStatus() + ".png";
+        std::string filePath = parserRaster->getBundlePath() + '/' + parserRaster->getFileIdentifer() + raster->getTextureStatus() + ".png";
         raster->exportImage(filePath);
     }
+    void importROI(std::shared_ptr<ROIparser> parser);
     void manageBands() const{raster->manageBands();}
     void averageBands() {raster->averageBands();}
     void strechBands();

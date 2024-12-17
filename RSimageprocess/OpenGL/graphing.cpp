@@ -934,21 +934,13 @@ void Image::generateClassifiedTexture(unsigned char *classified){
     textureManager.createtexture(texture);
     glBindTexture(GL_TEXTURE_2D, 0);
 }
-ROI::ROI(const std::vector<Vertex>& inputVertex):Primitive(inputVertex,GL_LINE_LOOP,ShaderBucket["line"].get()){
-    startPosition = inputVertex[0].position;
-    
-}
-ROI::ROI(const Vertex& inputVertex):Primitive(inputVertex,GL_LINE_LOOP,ShaderBucket["line"].get()){
-    startPosition = inputVertex.position;
-    
-}
-ROIcollection::ROIcollection(std::string resourchPath){
-    
-}
 void ROIcollection::draw(){
-    for (std::vector<ROI>::iterator roi = partition.begin(); roi != partition.end(); roi++)
-        roi->draw();
+    for (std::vector<ROIobject>::iterator roi = roiCollection.begin(); roi != roiCollection.end(); roi++)
+        for (std::vector<std::shared_ptr<ROI>>::iterator part = roi->partition.begin(); part != roi->partition.end(); part++){
+            (*part)->draw();
+        }
 }
+/*
 Extent ROIcollection::getExtent() const{
     std::vector<ROI>::const_iterator part = partition.begin();
     Extent totalExtent = part->getExtent();
@@ -961,6 +953,7 @@ Extent ROIcollection::getExtent() const{
     }
     return totalExtent;
 }
+ */
 void InitResource(GLFWwindow *window){
     {
         pShader test (new Shader());

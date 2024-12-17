@@ -6,18 +6,6 @@ struct BasicBayesParaList{
     float w;
     std::vector<double> mu,sigma;
 };
-class NaiveBayesClassifier : public Classifier{
-protected:
-    std::vector<BasicBayesParaList> para;
-    bool CalcClassProb(float* prob) {return true;}
-    double CalculateClassProbability(unsigned int classID,const dataVec& x);
-    void trainBayes(const Dataset& dataset,const float* classProbs);
-public:
-    NaiveBayesClassifier(){this->classifierName = "naiveBayes";};
-    ~NaiveBayesClassifier(){}
-    int Predict(const dataVec& x) override;
-    virtual void Train(const Dataset& dataset) override;
-};
 class FisherClassifier : public Classifier{
 protected:
     std::vector<dataVec> mu;
