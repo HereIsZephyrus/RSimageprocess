@@ -763,18 +763,23 @@ void Image::calcBasicDifference(const std::vector<Band>& inputBands, unsigned ch
         int bandIndex = textureManager.grayIndex;
         for (int y = 0; y < height; y++)
             for (int x = 0; x < width; x++){
-                int diff = 0;
-                if (bands[bandIndex].value->rawData[y][x] && y + bias.y >= 0 && y + bias.y < height && x + bias.x >= 0 && x + bias.x < width)
-                    diff = bands[bandIndex].value->average(y, x) - inputBands[bandIndex].value->average(y + bias.y, x + bias.x);
+                int diff = -999;
+                if (bands[bandIndex].value->rawData[y][x] && inputBands[bandIndex].value->rawData[y][x] &&y + bias.y >= 0 && y + bias.y < height && x + bias.x >= 0 && x + bias.x < width){
+                    diff = abs(bands[bandIndex].value->average(y, x) - inputBands[bandIndex].value->average(y + bias.y, x + bias.x));
+                    if (diff > maxDiff) maxDiff = diff;
+                    if (diff < minDIff) minDIff = diff;
+                }
                 tempDiff[y * width + x] = diff;
-                if (diff > maxDiff) maxDiff = diff;
-                if (diff < minDIff) minDIff = diff;
             }
         for (int i = 0; i < width * height; i++){
-            unsigned char diff = static_cast<float>((tempDiff[i] - minDIff)) / (maxDiff - minDIff) * 255;
-            difference[i * 3 + 0] = diff;
-            difference[i * 3 + 1] = diff;
-            difference[i * 3 + 2] = diff;
+            if (tempDiff[i] == -999)
+                difference[i] = 0;
+            else{
+                unsigned char diff = static_cast<float>((tempDiff[i] - minDIff)) / (maxDiff - minDIff) * 255;
+                difference[i * 3 + 0] = diff;
+                difference[i * 3 + 1] = diff;
+                difference[i * 3 + 2] = diff;
+            }
         }
         return;
     }
@@ -783,17 +788,21 @@ void Image::calcBasicDifference(const std::vector<Band>& inputBands, unsigned ch
         int bandIndex = textureManager.RGBindex[i];
         for (int y = 0; y < height; y++)
             for (int x = 0; x < width; x++){
-                int diff = 0;
-                if (bands[bandIndex].value->rawData[y][x] && y + bias.y >= 0 && y + bias.y < height && x + bias.x >= 0 && x + bias.x < width)
-                    diff = bands[bandIndex].value->average(y, x) - inputBands[bandIndex].value->average(y + bias.y, x + bias.x);
+                int diff = -999;
+                if (bands[bandIndex].value->rawData[y][x] && inputBands[bandIndex].value->rawData[y][x] && y + bias.y >= 0 && y + bias.y < height && x + bias.x >= 0 && x + bias.x < width){
+                    diff = abs(bands[bandIndex].value->average(y, x) - inputBands[bandIndex].value->average(y + bias.y, x + bias.x));
+                    if (diff > maxDiff) maxDiff = diff;
+                    if (diff < minDIff) minDIff = diff;
+                }
                 int loc = (y * width + x) * 3 + i;
                 tempDiff[loc] = diff;
-                if (diff > maxDiff) maxDiff = diff;
-                if (diff < minDIff) minDIff = diff;
             }
     }
     for (int i = 0; i < width * height * 3; i++)
-        difference[i] = static_cast<unsigned char>(static_cast<float>((tempDiff[i] - minDIff)) / (maxDiff - minDIff) * 255);
+        if (tempDiff[i] == -999)
+            difference[i] = 0;
+        else
+            difference[i] = static_cast<unsigned char>(static_cast<float>((tempDiff[i] - minDIff)) / (maxDiff - minDIff) * 255);
 }
 void Image::calcPCADifference(const std::vector<Band>& inputBands, unsigned char* difference,glm::vec2 bias){
     
