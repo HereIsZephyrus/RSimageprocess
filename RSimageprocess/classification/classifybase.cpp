@@ -47,7 +47,7 @@ void Accuracy::PrintPrecision(){
     if (ImGui::BeginTable("##confus mat", n + 1,ImGuiTableFlags_Borders)){
         ImGui::TableSetupColumn("类型");
         for (int i = 0; i < n; i++)
-            ImGui::TableSetupColumn(classMapper.getName(i).c_str());
+            ImGui::TableSetupColumn(classMapper.getName(i).c_str(),ImGuiTableColumnFlags_WidthStretch);
         ImGui::TableHeadersRow();
         for (int i = 0; i < n; i++){
             ImGui::TableNextRow();
@@ -63,7 +63,9 @@ void Accuracy::PrintPrecision(){
     ImGui::Text("<Precision>");
     if (ImGui::BeginTable("##confus mat", n,ImGuiTableFlags_Borders)){
         for (int i = 0; i < n; i++)
-            ImGui::TableSetupColumn(classMapper.getName(i).c_str());
+            ImGui::TableSetupColumn(classMapper.getName(i).c_str(),ImGuiTableColumnFlags_WidthStretch);
+        ImGui::TableHeadersRow();
+        ImGui::TableNextRow();
         for (int i = 0; i < n; i++){
             ImGui::TableNextColumn();
             std::stringstream oss;
@@ -75,7 +77,9 @@ void Accuracy::PrintPrecision(){
     ImGui::Text("<Recall>");
     if (ImGui::BeginTable("##confus mat", n,ImGuiTableFlags_Borders)){
         for (int i = 0; i < n; i++)
-            ImGui::TableSetupColumn(classMapper.getName(i).c_str());
+            ImGui::TableSetupColumn(classMapper.getName(i).c_str(),ImGuiTableColumnFlags_WidthStretch);
+        ImGui::TableHeadersRow();
+        ImGui::TableNextRow();
         for (int i = 0; i < n; i++){
             ImGui::TableNextColumn();
             std::stringstream oss;
@@ -87,7 +91,9 @@ void Accuracy::PrintPrecision(){
     ImGui::Text("<F1>");
     if (ImGui::BeginTable("##confus mat", n,ImGuiTableFlags_Borders)){
         for (int i = 0; i < n; i++)
-            ImGui::TableSetupColumn(classMapper.getName(i).c_str());
+            ImGui::TableSetupColumn(classMapper.getName(i).c_str(),ImGuiTableColumnFlags_WidthStretch);
+        ImGui::TableHeadersRow();
+        ImGui::TableNextRow();
         for (int i = 0; i < n; i++){
             ImGui::TableNextColumn();
             std::stringstream oss;
@@ -97,7 +103,7 @@ void Accuracy::PrintPrecision(){
     }
     ImGui::EndTable();
 }
-void Classifier::Classify(const std::vector<Band>& bands,unsigned char* classified){
+void Classifier::Classify(const std::vector<Band>& bands,unsigned char* classified, bool toAverage){
     ClassMapper& classMapper = ClassMapper::getClassMap();
     int height = bands[0].value->height, width = bands[0].value->width;
     for (int y = 0; y < height; y += margin)
@@ -111,7 +117,10 @@ void Classifier::Classify(const std::vector<Band>& bands,unsigned char* classifi
                     for (int j = x; j < x + margin; j++){
                         if (band->value->rawData[i][j] == 0)
                             continue;
-                        feature += band->value->rawData[i][j];
+                        if (toAverage)
+                            feature += band->value->average(y, x);
+                        else
+                            feature += band->value->strech(y, x);
                         ++count;
                     }
                 if (count == 0){

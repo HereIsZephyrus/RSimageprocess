@@ -30,12 +30,21 @@ protected:
         static constexpr double eps = 1e-6;
         double dot(const dataVec& x,const dataVec& y) {
             double result = 0.0;
-            for (size_t i = 0; i < x.size(); i++)
-                result += x[i] * y[i];
+            size_t n = x.size();
+            float xMax = 0, xMin = 1e9, yMax = 0, yMin = 1e9; // to normalize
+            for (size_t i = 0; i < n; i++){
+                if (x[i] > xMax)    xMax = x[i];
+                if (x[i] < xMin)    xMin = x[i];
+                if (y[i] > yMax)    yMax = y[i];
+                if (y[i] < yMin)    yMin = y[i];
+            }
+            float range = (xMax - xMin) * (yMax - yMin);
+            for (size_t i = 0; i < n; i++)
+                result += (x[i] - xMin) * (y[i] - yMin) / range;
             return result;
         }
     public:
-        OVOSVM(int pos,int neg,double limit = 0.01,double learningRate = 0.001, int maxIter = 1000)
+        OVOSVM(int pos,int neg,double limit = 0.01,double learningRate = 0.001, int maxIter = 2000)
         : learningRate(learningRate),maxIter(maxIter),positiveClass(pos),negetiveClass(neg) {}
         void train(const Dataset& dataset,const std::vector<int>& index, const std::vector<int>& y);
         bool predict(const dataVec& sample){return (dot(sample,weights) + bias)>0;}
@@ -106,7 +115,7 @@ protected:
     int maxDepth,minSamplesSplit,minSamplesLeaf;
     void Bootstrapping(const Dataset& rawdataset, Dataset& bootstrapped);
 public:
-    RandomForestClassifier(int nEstimators = 50,int maxDepth = 40, int minSamplesSplit = 2, int minSamplesLeaf = 1, int eachTreeSamplesNum = 250)
+    RandomForestClassifier(int nEstimators = 40,int maxDepth = 20, int minSamplesSplit = 3, int minSamplesLeaf = 2, int eachTreeSamplesNum = 150)
      : nEstimators(nEstimators),maxDepth(maxDepth),eachTreeSamplesNum(eachTreeSamplesNum),
         minSamplesSplit(minSamplesSplit),minSamplesLeaf(minSamplesLeaf) {
         decisionTrees.reserve(nEstimators);

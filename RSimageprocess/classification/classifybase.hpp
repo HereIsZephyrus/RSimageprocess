@@ -88,7 +88,7 @@ public:
     Accuracy accuracy;
     Classifier(){classifierName = "classifier";}
     std::string getName() const {return classifierName;}
-    void Classify(const std::vector<Band>& bands,unsigned char* classified);
+    void Classify(const std::vector<Band>& bands,unsigned char* classified, bool toAverage);
     void Examine(const Dataset& samples);
     virtual void Train(const Dataset &dataset) = 0;
     virtual int Predict(const dataVec& x) = 0;

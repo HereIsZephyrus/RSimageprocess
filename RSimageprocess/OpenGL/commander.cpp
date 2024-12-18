@@ -127,14 +127,11 @@ void Layer::showPrecision() const{
     ImGui::SetNextWindowPos(pos);
     if (ImGui::BeginPopup("Precision Information")) {
         ImGui::PushFont(gui::chineseFont);
-        ImGuiStyle& style = ImGui::GetStyle();
-        style.ItemSpacing = ImVec2(16.0f, 8.0f);
         classifier->accuracy.PrintPrecision();
         if (ImGui::Button("确认")) {
             gui::toShowPrecision = false;
             ImGui::CloseCurrentPopup();
         }
-        style.ItemSpacing = ImVec2(8.0f, 4.0f);
         ImGui::PopFont();
         ImGui::EndPopup();
     }
@@ -350,7 +347,7 @@ void Layer::supervised(){
     ImGui::OpenPopup("Supervised");
     ImVec2 pos = ImGui::GetMainViewport()->GetCenter();
     ImGui::SetNextWindowPos(pos);
-    static ClassifierType selectedItem = ClassifierType::rf;
+    static ClassifierType selectedItem = ClassifierType::fisher;
     if (ImGui::BeginPopup("Supervised")){
         ImGui::PushFont(gui::chineseFont);
         if (vector == nullptr){
@@ -380,14 +377,7 @@ void Layer::supervised(){
                 }
                 ImGui::EndCombo();
             }
-            //static char inputBuffer[10] = "";
-            //ImGui::Text("分类数量:");
-            //ImGui::SameLine();
-            //ImGui::PushItemWidth(40);
-            //ImGui::InputText("##input", inputBuffer, //sizeof(inputBuffer),ImGuiInputTextFlags_CharsDecimal);
-            //ImGui::PopItemWidth();
             if (ImGui::Button("确认")) {
-                //inputBuffer[0] = '\0';
                 ClassMapper& classMapper = ClassMapper::getClassMap();
                 classMapper.readMapper(vector->roiCollection);
                 ClassifyImage(selectedItem);
@@ -396,7 +386,6 @@ void Layer::supervised(){
             }
             ImGui::SameLine();
             if (ImGui::Button("取消")) {
-                //inputBuffer[0] = '\0';
                 gui::toShowSupervised = false;
                 ImGui::CloseCurrentPopup();
             }
@@ -473,7 +462,7 @@ void Layer::ClassifyImage(ClassifierType classifierType){
         classifier->Train(dataset);
         const std::vector<Band>& bands = raster->getBands();
         classified = new unsigned char[bands[0].value->height * bands[0].value->width * 3];
-        classifier->Classify(raster->getBands(), classified);
+        classifier->Classify(raster->getBands(), classified, raster->getToAverage());
         classifier->Examine(dataset);
     }
     generateClassifiedTexture(classified);

@@ -211,7 +211,7 @@ struct ClassType{
 };
 class ROI : public Primitive{
 public:
-    ROI(const std::vector<Vertex>& inputVertex):Primitive(inputVertex,GL_TRIANGLE_STRIP,ShaderBucket["test"].get()){}
+    ROI(const std::vector<Vertex>& inputVertex):Primitive(inputVertex,GL_TRIANGLE_FAN,ShaderBucket["test"].get()){}
     void getSortedVertex(std::vector<glm::vec2>& sorted,OGRCoordinateTransformation *transformation);
 };
 class ROIcollection{
