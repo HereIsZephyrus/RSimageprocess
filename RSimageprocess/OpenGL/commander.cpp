@@ -53,7 +53,8 @@ void Layer::draw(){
     using pImage = std::unique_ptr<Image>;
     using pROI = std::unique_ptr<ROIcollection>;
     if (raster != nullptr)  raster->draw();
-    if (vector != nullptr)  vector->draw();
+    if (vector != nullptr && roiVisible)  vector->draw();
+    if (featureTexture != nullptr && featureVisible)  featureTexture->draw();
 }
 bool Layer::BuildLayerStack(){
     const ImGuiTreeNodeFlags propertyFlag = ImGuiTreeNodeFlags_Leaf;
@@ -112,6 +113,25 @@ void Layer::showStatistic() const{
         raster->showBandInfo(showBandIndex);
         if (ImGui::Button("确认")) {
             gui::toShowStatistic = false;
+            ImGui::CloseCurrentPopup();
+        }
+        style.ItemSpacing = ImVec2(8.0f, 4.0f);
+        ImGui::PopFont();
+        ImGui::EndPopup();
+    }
+}
+void Layer::showPrecision() const{
+    ImGui::OpenPopup("Precision Information");
+    ImVec2 pos = ImGui::GetMainViewport()->GetCenter();
+    pos.x /= 2; pos.y /=2;
+    ImGui::SetNextWindowPos(pos);
+    if (ImGui::BeginPopup("Precision Information")) {
+        ImGui::PushFont(gui::chineseFont);
+        ImGuiStyle& style = ImGui::GetStyle();
+        style.ItemSpacing = ImVec2(16.0f, 8.0f);
+        classifier->accuracy.PrintPrecision();
+        if (ImGui::Button("确认")) {
+            gui::toShowPrecision = false;
             ImGui::CloseCurrentPopup();
         }
         style.ItemSpacing = ImVec2(8.0f, 4.0f);
@@ -324,7 +344,7 @@ void Layer::supervised(){
     static const methodStrMap methodList{
         {ClassifierType::fisher,"Fisher"},
         {ClassifierType::svm,"SVM"},
-        {ClassifierType::bp,"BP"},
+        //{ClassifierType::bp,"BP"},
         {ClassifierType::rf,"RF"},
     };
     ImGui::OpenPopup("Supervised");
@@ -403,6 +423,23 @@ void Layer::importROI(std::shared_ptr<ROIparser> parser){
         vector->roiCollection.push_back(newObj);
     }
 }
+void Layer::generateClassifiedTexture(unsigned char *classified){
+    const int width = raster->getBands()[0].value->width, height = raster->getBands()[0].value->height;
+    GLuint textureID;
+    glGenTextures(1, &textureID);
+    glBindTexture(GL_TEXTURE_2D, textureID);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, classified);
+    glGenerateMipmap(GL_TEXTURE_2D);
+    std::vector<glm::vec3> position = raster->getVertices();
+    if (featureTexture != nullptr)
+        featureTexture = nullptr;
+    featureTexture = std::make_shared<Texture>(position,textureID,true);
+    glBindTexture(GL_TEXTURE_2D, 0);
+}
 void Layer::ClassifyImage(ClassifierType classifierType){
     unsigned char* classified = nullptr;
     ClassMapper& classMapper = ClassMapper::getClassMap();
@@ -412,7 +449,7 @@ void Layer::ClassifyImage(ClassifierType classifierType){
     }
     else if (classifierType == ClassifierType::kmean){;
     }else{
-        std::shared_ptr<Classifier> classifier = nullptr;
+        if (classifier != nullptr)  classifier = nullptr;
         switch (classifierType) {
             case ClassifierType::fisher:
                 classifier = std::make_shared<FisherClassifier>();
@@ -420,9 +457,11 @@ void Layer::ClassifyImage(ClassifierType classifierType){
             case ClassifierType::svm:
                 classifier = std::make_shared<SVMClassifier>();
                 break;
-            case ClassifierType::bp:
-                classifier = std::make_shared<BPClassifier>();
-                break;
+                /*
+    case ClassifierType::bp:
+        classifier = std::make_shared<BPClassifier>();
+        break;
+    */
             case ClassifierType::rf:
                 classifier = std::make_shared<RandomForestClassifier>();
                 break;
@@ -435,10 +474,9 @@ void Layer::ClassifyImage(ClassifierType classifierType){
         const std::vector<Band>& bands = raster->getBands();
         classified = new unsigned char[bands[0].value->height * bands[0].value->width * 3];
         classifier->Classify(raster->getBands(), classified);
-        //classifier->Examine(<#const Dataset &samples#>);
+        classifier->Examine(dataset);
     }
-    raster->deleteTexture();
-    raster->generateClassifiedTexture(classified);
+    generateClassifiedTexture(classified);
     delete[] classified;
 }
 void LayerManager::addLayer(pLayer newLayer) {
@@ -557,7 +595,7 @@ void LayerManager::printLayerTree(){
 void LayerManager::draw(){
     pLayer current = tail;
     while (current != nullptr){
-        if (current->getVisble())
+        if (current->getLayerVisble())
             current->draw();
         current = current->prev;
     }

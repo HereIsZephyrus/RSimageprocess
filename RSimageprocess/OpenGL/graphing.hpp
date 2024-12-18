@@ -82,6 +82,7 @@ public:
     virtual void draw() const;
     void update();
     Extent getExtent() const{return extent;}
+    std::vector<glm::vec3> getVertices();
 protected:
     void initResource(GLenum shp,Shader* inputshader);
     GLuint VAO,VBO;
@@ -191,7 +192,6 @@ public:
     void draw() const override;
     const std::vector<Band>& getBands(){return bands;}
     void generateTexture(const std::vector<BandProcess>& processes);
-    void generateClassifiedTexture(unsigned char* classified);
     void deleteTexture() {textureManager.deleteTexture();}
     void exportImage(std::string filePath);
     void manageBands();

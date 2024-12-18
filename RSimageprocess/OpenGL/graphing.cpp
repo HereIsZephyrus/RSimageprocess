@@ -231,6 +231,12 @@ void Primitive::initResource(GLenum shp,Shader* inputshader){
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindVertexArray(0);
 }
+std::vector<glm::vec3> Primitive::getVertices(){
+    std::vector<glm::vec3> vertexArray;
+    for (int i = 0; i < vertexNum; i++)
+        vertexArray.push_back(glm::vec3(vertices[i * stride],vertices[i * stride + 1],vertices[i * stride + 2]));
+    return vertexArray;
+}
 Primitive::Primitive(const std::vector<Vertex>& inputVertex,GLenum shp,Shader* inputshader){
     vertexNum = inputVertex.size();
     vertices = new GLfloat[vertexNum * stride];
@@ -865,24 +871,6 @@ void Image::generateTexture(const std::vector<BandProcess>& processes){
     for (int index = 0; index < vertexNum ; index++)
             position.push_back(glm::vec3(vertices[index * stride],vertices[index * stride + 1],vertices[index * stride + 2]));
     std::shared_ptr<Texture> texture = std::make_shared<Texture>(position,textureID,textureManager.useRGB);
-    textureManager.createtexture(texture);
-    glBindTexture(GL_TEXTURE_2D, 0);
-}
-void Image::generateClassifiedTexture(unsigned char *classified){
-    const int width = bands[0].value->width, height = bands[0].value->height;
-    GLuint textureID;
-    glGenTextures(1, &textureID);
-    glBindTexture(GL_TEXTURE_2D, textureID);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, classified);
-    glGenerateMipmap(GL_TEXTURE_2D);
-    std::vector<glm::vec3> position;
-    for (int index = 0; index < vertexNum ; index++)
-            position.push_back(glm::vec3(vertices[index * stride],vertices[index * stride + 1],vertices[index * stride + 2]));
-    std::shared_ptr<Texture> texture = std::make_shared<Texture>(position,textureID,true);
     textureManager.createtexture(texture);
     glBindTexture(GL_TEXTURE_2D, 0);
 }

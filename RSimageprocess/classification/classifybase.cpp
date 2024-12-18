@@ -43,8 +43,7 @@ float Accuracy::getComprehensiveAccuracy(){
 void Accuracy::PrintPrecision(){
     ClassMapper& classMapper = ClassMapper::getClassMap();
     const int n = classMapper.getTotalNum();
-    ImGui::PushFont(gui::chineseFont);
-    ImGui::Text("<混淆矩阵>");
+    ImGui::Text("<Confusing Matrix>");
     if (ImGui::BeginTable("##confus mat", n + 1,ImGuiTableFlags_Borders)){
         ImGui::TableSetupColumn("类型");
         for (int i = 0; i < n; i++)
@@ -97,7 +96,6 @@ void Accuracy::PrintPrecision(){
         }
     }
     ImGui::EndTable();
-    ImGui::PopFont();
 }
 void Classifier::Classify(const std::vector<Band>& bands,unsigned char* classified){
     ClassMapper& classMapper = ClassMapper::getClassMap();
@@ -148,8 +146,7 @@ void Classifier::Examine(const Dataset& samples){
     accuracy.confuseMat.assign(classNum,std::vector<int>(classNum,0));
     std::vector<int> TP(classNum,0),FP(classNum,0),FN(classNum,0);
     for (typename Dataset::const_iterator it = samples.begin(); it != samples.end(); it++){
-        if (it->isTrainSample())
-            continue;
+        //if (it->isTrainSample())  continue;
         int trueLabel = it->getLabel(), predictLabel = Predict(it->getFeatures());
         ++accuracy.confuseMat[trueLabel][predictLabel];
         if (predictLabel == trueLabel)
@@ -160,10 +157,11 @@ void Classifier::Examine(const Dataset& samples){
         }
     }
     for (int i = 0; i < classNum; i++){
-        float precision = TP[i] / (TP[i] + FP[i]),recall = TP[i] / (TP[i] + FN[i]);
-        accuracy.precision[i] = precision;
-        accuracy.recall[i] = recall;
-        accuracy.f1[i] = 2 * precision * recall / (precision + recall);
+        float precision = static_cast<float>(TP[i]) / (TP[i] + FP[i]);
+        float recall = static_cast<float>(TP[i]) / (TP[i] + FN[i]);
+        accuracy.precision.push_back(precision);
+        accuracy.recall.push_back(recall);
+        accuracy.f1.push_back(2 * precision * recall / (precision + recall));
     }
 }
 void ScanLineEdgeConstruct(std::vector<ScanLineEdge>& position,std::shared_ptr<ROI> part,OGRCoordinateTransformation *transformation,int pixelSize){
