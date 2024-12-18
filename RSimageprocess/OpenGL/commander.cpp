@@ -8,6 +8,9 @@
 #include "commander.hpp"
 #include "window.hpp"
 #include "../interface.hpp"
+#include "../classification/classifybase.hpp"
+#include "../classification/unsupervise_classifier.hpp"
+#include "../classification/supervise_classifier.hpp"
 
 void BufferRecorder::initIO(GLFWwindow* window){
     memset(keyRecord, GL_FALSE, sizeof(keyRecord));
@@ -50,28 +53,36 @@ void Layer::draw(){
     using pImage = std::unique_ptr<Image>;
     using pROI = std::unique_ptr<ROIcollection>;
     if (raster != nullptr)  raster->draw();
-    if (vector != nullptr)  vector->draw();
+    if (vector != nullptr && roiVisible)  vector->draw();
+    if (featureTexture != nullptr && featureVisible)  featureTexture->draw();
 }
 bool Layer::BuildLayerStack(){
     const ImGuiTreeNodeFlags propertyFlag = ImGuiTreeNodeFlags_Leaf;
     bool clicked = false;
     if (vector != nullptr){
-        if (ImGui::TreeNodeEx("vector", propertyFlag)){
-            ImGui::TreePop();
-            if (ImGui::IsItemClicked())
-                clicked = true;
+        for (std::vector<ROIcollection::ROIobject>::const_iterator collection = vector->roiCollection.begin(); collection != vector->roiCollection.end(); collection++){
+            float color[3] = {collection->color.r / 255,collection->color.g / 255,collection->color.b / 255};
+            ImGui::ColorEdit3(std::string("##" + collection->name).c_str(), color, ImGuiColorEditFlags_NoInputs);
+            ImGui::SameLine();
+            if (ImGui::TreeNodeEx(collection->name.c_str(), propertyFlag)){
+                ImGui::TreePop();
+                if (ImGui::IsItemClicked())
+                    clicked = true;
+            }
         }
     }
-    const std::vector<Band>& bands = raster->getBands();
-    int counter = 0;
-    for (std::vector<Band>::const_reverse_iterator band = bands.rbegin(); band != bands.rend(); band++){
-        std::ostringstream nameOS;
-        std::string bandIndicator = getIndicator(counter);
-        nameOS<<"band"<<++counter<<std::setprecision(1)<<":"<<band->wavelength<<"mm"<<bandIndicator;
-        if (ImGui::TreeNodeEx(nameOS.str().c_str(), propertyFlag)){
-            ImGui::TreePop();
-            if (ImGui::IsItemClicked())
-                clicked = true;
+    if (raster != nullptr){
+        const std::vector<Band>& bands = raster->getBands();
+        int counter = 0;
+        for (std::vector<Band>::const_reverse_iterator band = bands.rbegin(); band != bands.rend(); band++){
+            std::ostringstream nameOS;
+            std::string bandIndicator = getIndicator(counter);
+            nameOS<<"band"<<++counter<<std::setprecision(1)<<":"<<band->wavelength<<"mm"<<bandIndicator;
+            if (ImGui::TreeNodeEx(nameOS.str().c_str(), propertyFlag)){
+                ImGui::TreePop();
+                if (ImGui::IsItemClicked())
+                    clicked = true;
+            }
         }
     }
     return clicked;
@@ -86,7 +97,7 @@ void Layer::showStatistic() const{
         ImGuiStyle& style = ImGui::GetStyle();
         style.ItemSpacing = ImVec2(16.0f, 8.0f);
         ImGui::Text("<影像元信息>");
-        parser->ShowInfo();
+        parserRaster->ShowInfo();
         ImGui::Text("<波段相关系数>");
         raster->showBandCoefficient();
         ImGui::Text("<波段信息>");
@@ -105,6 +116,22 @@ void Layer::showStatistic() const{
             ImGui::CloseCurrentPopup();
         }
         style.ItemSpacing = ImVec2(8.0f, 4.0f);
+        ImGui::PopFont();
+        ImGui::EndPopup();
+    }
+}
+void Layer::showPrecision() const{
+    ImGui::OpenPopup("Precision Information");
+    ImVec2 pos = ImGui::GetMainViewport()->GetCenter();
+    pos.x /= 2; pos.y /=2;
+    ImGui::SetNextWindowPos(pos);
+    if (ImGui::BeginPopup("Precision Information")) {
+        ImGui::PushFont(gui::chineseFont);
+        classifier->accuracy.PrintPrecision();
+        if (ImGui::Button("确认")) {
+            gui::toShowPrecision = false;
+            ImGui::CloseCurrentPopup();
+        }
         ImGui::PopFont();
         ImGui::EndPopup();
     }
@@ -210,7 +237,7 @@ void Layer::filterBands(){
             ImGui::PushItemWidth(40);
             ImGui::InputText("##input", inputBuffer, sizeof(inputBuffer),ImGuiInputTextFlags_CharsDecimal);
             ImGui::PopItemWidth();
-            if (ImGui::Button("确认##para")) {
+            if (ImGui::Button("确认")) {
                 para["bandwidth"] = std::stoi(inputBuffer);
                 buffer.processes.push_back(BandProcess(selectedAddItem,para));
                 inputBuffer[0] = '\0';
@@ -227,6 +254,219 @@ void Layer::filterBands(){
         ImGui::PopFont();
         ImGui::EndPopup();
     }
+}
+void Layer::TrainROI(){
+    using ROIobject = ROIcollection::ROIobject;
+    int label = 0;
+    const int pixelSize = std::stoi(parserRaster->projectionParams.at("GRID_CELL_SIZE_REFLECTIVE"));
+    OGRCoordinateTransformation* transformation = parserVector->getTransformation();
+    const std::vector<Band>& bands = raster->getBands();
+    const int featureNum = static_cast<int>(bands.size());
+    for (std::vector<ROIobject>::iterator collection = vector->roiCollection.begin(); collection != vector->roiCollection.end(); collection++){
+        for (std::vector<std::shared_ptr<ROI>>::iterator part = collection->partition.begin(); part != collection->partition.end(); part++){
+            std::vector<ScanLineEdge> edges;
+            ScanLineEdgeConstruct(edges,*part,transformation,pixelSize);
+            dataVec feature;
+            feature.assign(featureNum, 0);
+            int count = 0;
+            for (std::vector<ScanLineEdge>::iterator edge = edges.begin(); edge != edges.end(); edge++){
+                int left = static_cast<int>(edge->left), right = static_cast<int>(edge->right);
+                for (int x = left; x <= right ; x+=pixelSize){
+                    ++count;
+                    int indY = (parserRaster->projection.upleft.y - edge->y) / pixelSize, indX = (x - parserRaster->projection.downleft.x) / pixelSize;
+                    for (int i = 0; i < featureNum; i++){
+                        if (raster->getToAverage())
+                            feature[i] += bands[i].value->average(indY, indX);
+                        else
+                            feature[i] += bands[i].value->strech(indY, indX);
+                    }
+                }
+            }
+            for (int i = 0; i < featureNum; i++)
+                feature[i] /= count;
+            dataset.push_back(Sample(label, feature));
+        }
+        ++label;
+    }
+}
+void Layer::unsupervised(){
+    using methodStrMap = std::unordered_map<ClassifierType,std::string>;
+    static const methodStrMap methodList{
+        {ClassifierType::isodata,"ISODATA"},
+        {ClassifierType::kmean,"K-mean"},
+    };
+    ImGui::OpenPopup("Unsupervised");
+    ImVec2 pos = ImGui::GetMainViewport()->GetCenter();
+    ImGui::SetNextWindowPos(pos);
+    static ClassifierType selectedItem = ClassifierType::isodata;
+    if (ImGui::BeginPopup("Unsupervised")){
+        ImGui::PushFont(gui::chineseFont);
+        if (ImGui::BeginCombo("选择一种方式", methodList.at(selectedItem).c_str())) {
+            for (methodStrMap::const_iterator method = methodList.begin(); method != methodList.end(); method++){
+                bool isSelected = (selectedItem == method->first);
+                if (ImGui::Selectable(method->second.c_str(), isSelected))
+                    selectedItem = method->first;
+                if (isSelected)
+                    ImGui::SetItemDefaultFocus();
+            }
+            ImGui::EndCombo();
+        }
+        static char inputBuffer[10] = "";
+        ImGui::Text("分类数量:");
+        ImGui::SameLine();
+        ImGui::PushItemWidth(40);
+        ImGui::InputText("##input", inputBuffer, sizeof(inputBuffer),ImGuiInputTextFlags_CharsDecimal);
+        ImGui::PopItemWidth();
+        ClassMapper& classMapper = ClassMapper::getClassMap();
+        if (inputBuffer[0] != '\0')
+            classMapper.setTotalNum(std::stoi(inputBuffer));
+        if (ImGui::Button("确认")) {
+            inputBuffer[0] = '\0';
+            ClassifyImage(selectedItem);
+            gui::toShowUnsupervised = false;
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("取消")) {
+            inputBuffer[0] = '\0';
+            gui::toShowUnsupervised = false;
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::PopFont();
+        ImGui::EndPopup();
+    }
+}
+void Layer::supervised(){
+    using methodStrMap = std::unordered_map<ClassifierType,std::string>;
+    static const methodStrMap methodList{
+        {ClassifierType::fisher,"Fisher"},
+        {ClassifierType::svm,"SVM"},
+        //{ClassifierType::bp,"BP"},
+        {ClassifierType::rf,"RF"},
+    };
+    ImGui::OpenPopup("Supervised");
+    ImVec2 pos = ImGui::GetMainViewport()->GetCenter();
+    ImGui::SetNextWindowPos(pos);
+    static ClassifierType selectedItem = ClassifierType::fisher;
+    if (ImGui::BeginPopup("Supervised")){
+        ImGui::PushFont(gui::chineseFont);
+        if (vector == nullptr){
+            ImGui::Text("请先导入ROI文件!");
+            if (ImGui::Button("取消")) {
+                gui::toShowSupervised = false;
+                ImGui::CloseCurrentPopup();
+            }
+        }else if (dataset.empty()){
+            ImGui::Text("请先训练样本!");
+            if (ImGui::Button("训练")) {
+                TrainROI();
+            }
+            ImGui::SameLine();
+            if (ImGui::Button("取消")) {
+                gui::toShowSupervised = false;
+                ImGui::CloseCurrentPopup();
+            }
+        }else{
+            if (ImGui::BeginCombo("选择一种方式", methodList.at(selectedItem).c_str())) {
+                for (methodStrMap::const_iterator method = methodList.begin(); method != methodList.end(); method++){
+                    bool isSelected = (selectedItem == method->first);
+                    if (ImGui::Selectable(method->second.c_str(), isSelected))
+                        selectedItem = method->first;
+                    if (isSelected)
+                        ImGui::SetItemDefaultFocus();
+                }
+                ImGui::EndCombo();
+            }
+            if (ImGui::Button("确认")) {
+                ClassMapper& classMapper = ClassMapper::getClassMap();
+                classMapper.readMapper(vector->roiCollection);
+                ClassifyImage(selectedItem);
+                gui::toShowSupervised = false;
+                ImGui::CloseCurrentPopup();
+            }
+            ImGui::SameLine();
+            if (ImGui::Button("取消")) {
+                gui::toShowSupervised = false;
+                ImGui::CloseCurrentPopup();
+            }
+        }
+        ImGui::PopFont();
+        ImGui::EndPopup();
+    }
+}
+void Layer::importROI(std::shared_ptr<ROIparser> parser){
+    std::vector<ClassType> collection = parser->getCollection();
+    vector = std::make_unique<ROIcollection>();
+    parserVector = parser;
+    for (std::vector<ClassType>::const_iterator element = collection.begin(); element != collection.end(); element++){
+        ROIcollection::ROIobject newObj;
+        newObj.name = element->name;
+        newObj.color = element->color;
+        for (std::vector<std::vector<OGRPoint>>::const_iterator pos = element->position.begin(); pos != element->position.end(); pos++){
+            std::vector<Vertex> inputVertex;
+            for (std::vector<OGRPoint>::const_iterator loc = pos->begin(); loc != pos->end(); loc++)
+                inputVertex.push_back(Vertex(glm::vec3(loc->getX(),loc->getY(),0.0),newObj.color));
+            std::shared_ptr<ROI> newROI = std::make_shared<ROI>(inputVertex);
+            newObj.partition.push_back(newROI);
+        }
+        vector->roiCollection.push_back(newObj);
+    }
+}
+void Layer::generateClassifiedTexture(unsigned char *classified){
+    const int width = raster->getBands()[0].value->width, height = raster->getBands()[0].value->height;
+    GLuint textureID;
+    glGenTextures(1, &textureID);
+    glBindTexture(GL_TEXTURE_2D, textureID);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, classified);
+    glGenerateMipmap(GL_TEXTURE_2D);
+    std::vector<glm::vec3> position = raster->getVertices();
+    if (featureTexture != nullptr)
+        featureTexture = nullptr;
+    featureTexture = std::make_shared<Texture>(position,textureID,true);
+    glBindTexture(GL_TEXTURE_2D, 0);
+}
+void Layer::ClassifyImage(ClassifierType classifierType){
+    unsigned char* classified = nullptr;
+    ClassMapper& classMapper = ClassMapper::getClassMap();
+    if (classifierType == ClassifierType::isodata){
+        ISODATA solver(classMapper.getTotalNum());
+        solver.Classify(raster->getBands(), raster->getToAverage(), classified);
+    }
+    else if (classifierType == ClassifierType::kmean){;
+    }else{
+        if (classifier != nullptr)  classifier = nullptr;
+        switch (classifierType) {
+            case ClassifierType::fisher:
+                classifier = std::make_shared<FisherClassifier>();
+                break;
+            case ClassifierType::svm:
+                classifier = std::make_shared<SVMClassifier>();
+                break;
+                /*
+    case ClassifierType::bp:
+        classifier = std::make_shared<BPClassifier>();
+        break;
+    */
+            case ClassifierType::rf:
+                classifier = std::make_shared<RandomForestClassifier>();
+                break;
+            default:
+                break;
+        }
+        if (classifier == nullptr)
+            return;
+        classifier->Train(dataset);
+        const std::vector<Band>& bands = raster->getBands();
+        classified = new unsigned char[bands[0].value->height * bands[0].value->width * 3];
+        classifier->Classify(raster->getBands(), classified, raster->getToAverage());
+        classifier->Examine(dataset);
+    }
+    generateClassifiedTexture(classified);
+    delete[] classified;
 }
 void LayerManager::addLayer(pLayer newLayer) {
     if (head == nullptr) {
@@ -245,7 +485,7 @@ void LayerManager::importlayer(std::shared_ptr<BundleParser> parser){
         {glm::vec3(parser->geographic.upleft.x,parser->geographic.upleft.y,0.0),glm::vec3(1.0,1.0,1.0)},
     };
     pLayer newLayer = std::make_shared<Layer>(parser->getFileIdentifer(),faceVertices);
-    newLayer->parser = parser;
+    newLayer->parserRaster = parser;
     std::unique_ptr<Image>& image = newLayer->raster;
     for (std::unordered_map<int, std::string>::iterator rasterInfo = parser->TIFFpathParser.begin(); rasterInfo != parser->TIFFpathParser.end(); rasterInfo++){
         std::string imagePath = parser->getBundlePath() + "/" + rasterInfo->second;
@@ -344,7 +584,7 @@ void LayerManager::printLayerTree(){
 void LayerManager::draw(){
     pLayer current = tail;
     while (current != nullptr){
-        if (current->getVisble())
+        if (current->getLayerVisble())
             current->draw();
         current = current->prev;
     }

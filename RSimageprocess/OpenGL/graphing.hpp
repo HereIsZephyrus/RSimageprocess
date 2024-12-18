@@ -10,6 +10,9 @@
 
 #define GLEW_STATIC
 #define SPECT_VALUE_RANGE 65536
+#include <gdal.h>
+#include <gdal_priv.h>
+#include <gdal_utils.h>
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 #include <cstring>
@@ -32,7 +35,7 @@ struct Spectum{
     unsigned short maxVal,minVal;
     int width,height,totalPixel;
     double mean;
-    glm::vec2 validRange[4];
+    //glm::vec2 validRange[4];
     Spectum(unsigned short* flatd,int w,int h); //deprecated at this time
     Spectum(const cv::Mat& image);
     SpectumRange strechRange;
@@ -79,6 +82,7 @@ public:
     virtual void draw() const;
     void update();
     Extent getExtent() const{return extent;}
+    std::vector<glm::vec3> getVertices();
 protected:
     void initResource(GLenum shp,Shader* inputshader);
     GLuint VAO,VBO;
@@ -92,7 +96,7 @@ protected:
 };
 class Texture{
 public:
-    Texture(const std::vector<glm::vec3>& position, const std::vector<glm::vec2>& texturePos, GLuint textureID,bool useRGB);
+    Texture(const std::vector<glm::vec3>& position, GLuint textureID,bool useRGB);
     Texture(const Texture&) = delete;
     void operator=(const Texture&) = delete;
     ~Texture(){
@@ -198,18 +202,28 @@ public:
     void showBandCoefficient();
     std::string getTextureStatus(){return textureManager.getStatus();}
     std::string getIndicator(int index){return textureManager.getIndicator(index);}
+    bool getToAverage() const {return textureManager.getToAverage();}
+};
+struct ClassType{
+    std::vector<std::vector<OGRPoint>> position;
+    std::string name;
+    glm::vec3 color;
 };
 class ROI : public Primitive{
-    glm::vec3 startPosition;
 public:
-    ROI(const std::vector<Vertex>& inputVertex);
-    ROI(const Vertex& inputVertex);
+    ROI(const std::vector<Vertex>& inputVertex):Primitive(inputVertex,GL_TRIANGLE_FAN,ShaderBucket["test"].get()){}
+    void getSortedVertex(std::vector<glm::vec2>& sorted,OGRCoordinateTransformation *transformation);
 };
 class ROIcollection{
-    std::vector<ROI> partition;
 public:
-    ROIcollection(std::string resourchPath);
+    struct ROIobject{
+        std::string name;
+        glm::vec3 color;
+        std::vector<std::shared_ptr<ROI>> partition;
+    };
+    ROIcollection(){};
     void draw();
-    Extent getExtent() const;
+    //Extent getExtent() const;
+    std::vector<ROIobject> roiCollection;
 };
 #endif /* graphing_hpp */

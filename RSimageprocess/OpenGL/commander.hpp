@@ -22,23 +22,37 @@
 #include "graphing.hpp"
 #include "camera.hpp"
 #include "../interface.hpp"
+#include "../classification/classifybase.hpp"
+
+enum class ClassifierType{
+    fisher,
+    svm,
+    //bp, --deprecated
+    rf,
+    isodata,
+    kmean,
+};
 class LayerManager;
 class Layer{
     std::unique_ptr<Image> raster;
     std::unique_ptr<ROIcollection> vector;
-    std::shared_ptr<BundleParser> parser;
+    std::shared_ptr<BundleParser> parserRaster;
+    std::shared_ptr<ROIparser> parserVector;
+    std::shared_ptr<Texture> featureTexture;
+    std::shared_ptr<Classifier> classifier;
     std::string name;
-    bool visble;
+    bool layerVisble,roiVisible,featureVisible;
+    std::vector<Sample> dataset;
     std::string getFileName(std::string resourcePath);
     std::string getIndicator(int index){return raster->getIndicator(index);}
+    void TrainROI();
+    void generateClassifiedTexture(unsigned char* classified);
 public:
     friend LayerManager;
     Layer(std::string layerName,std::string resourcePath):
-    name(layerName),prev(nullptr),next(nullptr),visble(true),raster(nullptr),parser(nullptr){
-        vector = std::make_unique<ROIcollection>(resourcePath);
-    }
+    name(layerName),prev(nullptr),next(nullptr),layerVisble(true),roiVisible(true),featureVisible(true),raster(nullptr),vector(nullptr),parserRaster(nullptr),parserVector(nullptr),featureTexture(nullptr),classifier(nullptr){}
     Layer(std::string layerName, const std::vector<Vertex>& vertices):
-    name(layerName),prev(nullptr),next(nullptr),visble(true),vector(nullptr),parser(nullptr){
+    name(layerName),prev(nullptr),next(nullptr),layerVisble(true),roiVisible(true),featureVisible(true),vector(nullptr),parserRaster(nullptr),parserVector(nullptr),featureTexture(nullptr),classifier(nullptr){
         raster = std::make_unique<Image>(vertices);
     }
     void draw();
@@ -46,18 +60,29 @@ public:
     std::string getName() const{return name;}
     std::shared_ptr<Layer> prev,next;
     Extent getExtent() const{return raster->getExtent();}
-    bool getVisble() const {return visble;}
-    void toggleVisble() {visble = !visble;}
+    bool getLayerVisble() const {return layerVisble;}
+    void toggleLayerVisble() {layerVisble = !layerVisble;}
+    bool getROIVisble() const {return roiVisible;}
+    void toggleROIVisble() {roiVisible = !roiVisible;}
+    bool getFeatureVisble() const {return featureVisible;}
+    void toggleFeatureVisble() {featureVisible = !featureVisible;}
+    bool hasROI() const {return vector != nullptr;}
+    bool hasClassified() const {return classifier != nullptr;}
     void showStatistic() const;
+    void showPrecision() const;
     void exportImage() const{
-        std::string filePath = parser->getBundlePath() + '/' + parser->getFileIdentifer() + raster->getTextureStatus() + ".png";
+        std::string filePath = parserRaster->getBundlePath() + '/' + parserRaster->getFileIdentifer() + raster->getTextureStatus() + ".png";
         raster->exportImage(filePath);
     }
+    void importROI(std::shared_ptr<ROIparser> parser);
     void manageBands() const{raster->manageBands();}
     void averageBands() {raster->averageBands();}
     void strechBands();
     void filterBands();
+    void unsupervised();
+    void supervised();
     void resetBandIndex(){raster->resetIndex();}
+    void ClassifyImage(ClassifierType classifierType);
 };
 class LayerManager{
     using pLayer = std::shared_ptr<Layer>;

@@ -75,7 +75,7 @@ int initOpenGL(GLFWwindow *&window,std::string windowName) {
 namespace gui {
 ImFont *englishFont = nullptr,*chineseFont = nullptr;
 bool toImportImage = false,toImportROI = false;
-bool toShowStatistic = false,toShowManageBand = false,toShowStrechLevel = false,toShowSpaceFilter = false;
+bool toShowStatistic = false,toShowManageBand = false,toShowStrechLevel = false,toShowSpaceFilter = false,toShowUnsupervised = false,toShowSupervised = false,toShowPrecision = false;
 int Initialization(GLFWwindow *window) {
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
@@ -108,6 +108,10 @@ bool DrawPopup(){
         ImportImage();
         return true;
     }
+    if (toImportROI){
+        ImportROI();
+        return true;
+    }
     if (toShowStatistic){
         ShowStatistic();
         return true;
@@ -124,6 +128,18 @@ bool DrawPopup(){
         FilterBands();
         return true;
     }
+    if (toShowUnsupervised){
+        UnsupervisedClassify();
+        return  true;
+    }
+    if (toShowSupervised){
+        SupervisedClassify();
+        return true;
+    }
+    if (toShowPrecision){
+        showPrecision();
+        return true;
+    }
     return false;
 }
 void RenderLayerTree(){
@@ -136,26 +152,41 @@ void RenderLayerTree(){
 void RenderWorkspace(){
     WindowParas& windowPara = WindowParas::getInstance();
     BufferRecorder& buffer = BufferRecorder::getBuffer();
-    ImGui::BeginChild("Workspace",ImVec2(0,windowPara.WINDOW_HEIGHT / 3));
+    ImGui::BeginChild("Workspace",ImVec2(0,windowPara.WINDOW_HEIGHT * 3 / 5));
     ImGuiStyle& style = ImGui::GetStyle();
     const ImVec2 ButtonSize = ImVec2(windowPara.SIDEBAR_WIDTH * 3 / 7, 50);
-    style.FramePadding = ImVec2(8.0f, 4.0f);
-    style.ItemSpacing = ImVec2(16.0f, 8.0f);
+    style.FramePadding = ImVec2(6.0f, 4.0f);
+    style.ItemSpacing = ImVec2(12.0f, 8.0f);
     ImGui::PushFont(gui::chineseFont);
     if (ImGui::Button("导入遥感影像",ButtonSize))
         toImportImage = true;
     ImGui::SameLine();
-    if (ImGui::Button("导入ROI",ButtonSize))
-        toImportROI = true;
+    if (ImGui::Button("导入影像序列",ButtonSize))
+        toImportImage = true;
     if (buffer.selectedLayer != nullptr){
         std::string visbleButtonStr = "隐藏图层";
-        if (!buffer.selectedLayer->getVisble())
+        if (!buffer.selectedLayer->getLayerVisble())
             visbleButtonStr = "显示图层";
         if (ImGui::Button(visbleButtonStr.c_str(),ButtonSize))
-            buffer.selectedLayer->toggleVisble();
+            buffer.selectedLayer->toggleLayerVisble();
         ImGui::SameLine();
         if (ImGui::Button("导出影像",ButtonSize))
             buffer.selectedLayer->exportImage();
+        if (buffer.selectedLayer->hasROI()){
+            if (buffer.selectedLayer->getROIVisble()){
+                if (ImGui::Button("隐藏ROI",ButtonSize))
+                    buffer.selectedLayer->toggleROIVisble();
+            }else{
+                if (ImGui::Button("显示ROI",ButtonSize))
+                    buffer.selectedLayer->toggleROIVisble();
+            }
+        }else{
+            if (ImGui::Button("导入ROI",ButtonSize))
+                toImportROI = true;
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("计算变化",ButtonSize))
+            toImportROI = true;
         if (ImGui::Button("查看信息",ButtonSize))
             toShowStatistic = true;
         ImGui::SameLine();
@@ -175,6 +206,23 @@ void RenderWorkspace(){
         if (ImGui::Button("空间滤波",ButtonSize)){
             toShowSpaceFilter = true;
         }
+        if (ImGui::Button("无监督分类",ButtonSize)){
+            toShowUnsupervised = true;
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("监督分类",ButtonSize)){
+            toShowSupervised = true;
+        }
+        visbleButtonStr = "隐藏特征";
+        if (!buffer.selectedLayer->getFeatureVisble())
+            visbleButtonStr = "显示特征";
+        if (buffer.selectedLayer->hasClassified())
+            if (ImGui::Button(visbleButtonStr.c_str(),ButtonSize))
+                buffer.selectedLayer->toggleFeatureVisble();
+        ImGui::SameLine();
+        if (buffer.selectedLayer->hasClassified())
+            if (ImGui::Button("显示精度",ButtonSize))
+                toShowPrecision = true;
     }
     style.FramePadding = ImVec2(4.0f, 2.0f);
     style.ItemSpacing = ImVec2(8.0f, 4.0f);
@@ -208,6 +256,35 @@ void ImportImage(){
     }
     ImGui::PopFont();
 }
+void ImportROI(){
+    static char inputBuffer[256] = "";
+    ImGui::PushFont(gui::chineseFont);
+    ImGui::OpenPopup("Import ROI");
+    ImVec2 pos = ImGui::GetMainViewport()->GetCenter();
+    ImGui::SetNextWindowPos(pos);
+    if (ImGui::BeginPopup("Import ROI")) {
+        ImGui::Text("输入ROI的GeoJson文件");
+        ImGui::InputText("##input", inputBuffer, sizeof(inputBuffer));
+        if (ImGui::Button("确认")) {
+            std::shared_ptr<ROIparser> parser = std::make_shared<ROIparser>(inputBuffer);
+            BufferRecorder& buffer = BufferRecorder::getBuffer();
+            if (buffer.selectedLayer != nullptr){
+                buffer.selectedLayer->importROI(parser);
+            }
+            inputBuffer[0] = '\0';
+            toImportROI = false;
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("取消")) {
+            inputBuffer[0] = '\0';
+            toImportROI = false;
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::EndPopup();
+    }
+    ImGui::PopFont();
+}
 void ShowStatistic(){
     BufferRecorder& buffer = BufferRecorder::getBuffer();
     buffer.selectedLayer->showStatistic();
@@ -223,5 +300,17 @@ void ChooseStrechLevel(){
 void FilterBands(){
     BufferRecorder& buffer = BufferRecorder::getBuffer();
     buffer.selectedLayer->filterBands();
+}
+void UnsupervisedClassify(){
+    BufferRecorder& buffer = BufferRecorder::getBuffer();
+    buffer.selectedLayer->unsupervised();
+}
+void SupervisedClassify(){
+    BufferRecorder& buffer = BufferRecorder::getBuffer();
+    buffer.selectedLayer->supervised();
+}
+void showPrecision(){
+    BufferRecorder& buffer = BufferRecorder::getBuffer();
+    buffer.selectedLayer->showPrecision();
 }
 }

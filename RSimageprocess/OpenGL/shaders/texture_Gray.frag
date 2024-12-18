@@ -6,5 +6,8 @@ uniform sampler2D textureSampler;
 
 void main() {
     float intensity = texture(textureSampler, TexCoord).r;
-    color = vec4(intensity, intensity, intensity, 1.0);
+    if (intensity > 0)
+        color = vec4(intensity, intensity, intensity, 1.0);
+    else
+        color = vec4(0.0,0.0,0.0,0.0);
 }

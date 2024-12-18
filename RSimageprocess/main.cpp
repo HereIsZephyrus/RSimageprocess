@@ -54,6 +54,7 @@ void Initialization(GLFWwindow *& window){
         std::cout<<"init OpenGL failed"<<std::endl;
         return;
     }
+    srand((unsigned int)time(NULL));
     InitResource(window);
     gui::Initialization(window);
     BufferRecorder& buffer = BufferRecorder::getBuffer();

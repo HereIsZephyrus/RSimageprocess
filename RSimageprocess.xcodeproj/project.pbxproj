@@ -7,30 +7,27 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		320B27452D0C2AD100B909A2 /* libopencv_core.4.10.0.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 320B27442D0C2AD100B909A2 /* libopencv_core.4.10.0.dylib */; };
-		320B27462D0C2AD100B909A2 /* libopencv_core.4.10.0.dylib in Embed Libraries */ = {isa = PBXBuildFile; fileRef = 320B27442D0C2AD100B909A2 /* libopencv_core.4.10.0.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
-		320B27482D0C2B1600B909A2 /* libopencv_imgcodecs.4.10.0.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 320B27472D0C2B1600B909A2 /* libopencv_imgcodecs.4.10.0.dylib */; };
-		320B27492D0C2B1600B909A2 /* libopencv_imgcodecs.4.10.0.dylib in Embed Libraries */ = {isa = PBXBuildFile; fileRef = 320B27472D0C2B1600B909A2 /* libopencv_imgcodecs.4.10.0.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
-		320B274E2D0C2BC700B909A2 /* libopencv_highgui.4.10.0.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 320B274D2D0C2BC700B909A2 /* libopencv_highgui.4.10.0.dylib */; };
-		320B274F2D0C2BC700B909A2 /* libopencv_highgui.4.10.0.dylib in Embed Libraries */ = {isa = PBXBuildFile; fileRef = 320B274D2D0C2BC700B909A2 /* libopencv_highgui.4.10.0.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 		323C78132D08069E00C62C36 /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 323C78122D08069E00C62C36 /* OpenGL.framework */; };
-		323C78152D0806B500C62C36 /* libgdal.35.3.9.3.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 323C78142D0806B500C62C36 /* libgdal.35.3.9.3.dylib */; };
-		323C78162D0806B500C62C36 /* libgdal.35.3.9.3.dylib in Embed Libraries */ = {isa = PBXBuildFile; fileRef = 323C78142D0806B500C62C36 /* libgdal.35.3.9.3.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
-		323C78172D0806E500C62C36 /* libgdal.35.3.9.3.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 323C78142D0806B500C62C36 /* libgdal.35.3.9.3.dylib */; };
 		323C78192D0806F400C62C36 /* libGLEW.2.2.0.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 323C78182D0806F400C62C36 /* libGLEW.2.2.0.dylib */; };
 		323C781A2D0806F400C62C36 /* libGLEW.2.2.0.dylib in Embed Libraries */ = {isa = PBXBuildFile; fileRef = 323C78182D0806F400C62C36 /* libGLEW.2.2.0.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 		323C781C2D08070E00C62C36 /* libglfw.3.4.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 323C781B2D08070E00C62C36 /* libglfw.3.4.dylib */; };
 		323C781D2D08070E00C62C36 /* libglfw.3.4.dylib in Embed Libraries */ = {isa = PBXBuildFile; fileRef = 323C781B2D08070E00C62C36 /* libglfw.3.4.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 		323C781F2D08072400C62C36 /* libglm.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 323C781E2D08072400C62C36 /* libglm.dylib */; };
 		323C78202D08072400C62C36 /* libglm.dylib in Embed Libraries */ = {isa = PBXBuildFile; fileRef = 323C781E2D08072400C62C36 /* libglm.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
-		323C78222D08074E00C62C36 /* libomp.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 323C78212D08074E00C62C36 /* libomp.dylib */; };
-		323C78232D08074E00C62C36 /* libomp.dylib in Embed Libraries */ = {isa = PBXBuildFile; fileRef = 323C78212D08074E00C62C36 /* libomp.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 		323C78B72D081DC600C62C36 /* imgui_draw.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 323C78A92D081DC600C62C36 /* imgui_draw.cpp */; };
 		323C78B82D081DC600C62C36 /* imgui_impl_opengl3.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 323C78AD2D081DC600C62C36 /* imgui_impl_opengl3.cpp */; };
 		323C78B92D081DC600C62C36 /* imgui.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 323C78A72D081DC600C62C36 /* imgui.cpp */; };
 		323C78BA2D081DC600C62C36 /* imgui_impl_glfw.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 323C78AB2D081DC600C62C36 /* imgui_impl_glfw.cpp */; };
 		323C78BB2D081DC600C62C36 /* imgui_tables.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 323C78B02D081DC600C62C36 /* imgui_tables.cpp */; };
 		323C78BD2D081DC600C62C36 /* imgui_widgets.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 323C78B12D081DC600C62C36 /* imgui_widgets.cpp */; };
+		327FA6392D1114900068307E /* libopencv_core.4.10.0.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 327FA6382D1114900068307E /* libopencv_core.4.10.0.dylib */; };
+		327FA63A2D1114900068307E /* libopencv_core.4.10.0.dylib in Embed Libraries */ = {isa = PBXBuildFile; fileRef = 327FA6382D1114900068307E /* libopencv_core.4.10.0.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
+		327FA63C2D1114A20068307E /* libopencv_highgui.4.10.0.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 327FA63B2D1114A20068307E /* libopencv_highgui.4.10.0.dylib */; };
+		327FA63D2D1114A20068307E /* libopencv_highgui.4.10.0.dylib in Embed Libraries */ = {isa = PBXBuildFile; fileRef = 327FA63B2D1114A20068307E /* libopencv_highgui.4.10.0.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
+		327FA63F2D1114B00068307E /* libopencv_imgcodecs.4.10.0.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 327FA63E2D1114B00068307E /* libopencv_imgcodecs.4.10.0.dylib */; };
+		327FA6402D1114B00068307E /* libopencv_imgcodecs.4.10.0.dylib in Embed Libraries */ = {isa = PBXBuildFile; fileRef = 327FA63E2D1114B00068307E /* libopencv_imgcodecs.4.10.0.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
+		327FA6422D1114F30068307E /* libgdal.36.3.10.0.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 327FA6412D1114F30068307E /* libgdal.36.3.10.0.dylib */; };
+		327FA6432D1114F30068307E /* libgdal.36.3.10.0.dylib in Embed Libraries */ = {isa = PBXBuildFile; fileRef = 327FA6412D1114F30068307E /* libgdal.36.3.10.0.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -49,14 +46,13 @@
 			dstPath = "";
 			dstSubfolderSpec = 10;
 			files = (
-				323C78232D08074E00C62C36 /* libomp.dylib in Embed Libraries */,
+				327FA6402D1114B00068307E /* libopencv_imgcodecs.4.10.0.dylib in Embed Libraries */,
+				327FA63D2D1114A20068307E /* libopencv_highgui.4.10.0.dylib in Embed Libraries */,
 				323C781D2D08070E00C62C36 /* libglfw.3.4.dylib in Embed Libraries */,
 				323C78202D08072400C62C36 /* libglm.dylib in Embed Libraries */,
-				320B27492D0C2B1600B909A2 /* libopencv_imgcodecs.4.10.0.dylib in Embed Libraries */,
-				323C78162D0806B500C62C36 /* libgdal.35.3.9.3.dylib in Embed Libraries */,
-				320B274F2D0C2BC700B909A2 /* libopencv_highgui.4.10.0.dylib in Embed Libraries */,
-				320B27462D0C2AD100B909A2 /* libopencv_core.4.10.0.dylib in Embed Libraries */,
+				327FA63A2D1114900068307E /* libopencv_core.4.10.0.dylib in Embed Libraries */,
 				323C781A2D0806F400C62C36 /* libGLEW.2.2.0.dylib in Embed Libraries */,
+				327FA6432D1114F30068307E /* libgdal.36.3.10.0.dylib in Embed Libraries */,
 			);
 			name = "Embed Libraries";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -94,6 +90,10 @@
 		323C78B32D081DC600C62C36 /* imstb_textedit.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = imstb_textedit.h; sourceTree = "<group>"; };
 		323C78B42D081DC600C62C36 /* imstb_truetype.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = imstb_truetype.h; sourceTree = "<group>"; };
 		323C78B52D081DC600C62C36 /* Songti.ttc */ = {isa = PBXFileReference; lastKnownFileType = file; path = Songti.ttc; sourceTree = "<group>"; };
+		327FA6382D1114900068307E /* libopencv_core.4.10.0.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libopencv_core.4.10.0.dylib; path = ../../../../opt/homebrew/Cellar/opencv/4.10.0_15/lib/libopencv_core.4.10.0.dylib; sourceTree = "<group>"; };
+		327FA63B2D1114A20068307E /* libopencv_highgui.4.10.0.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libopencv_highgui.4.10.0.dylib; path = ../../../../opt/homebrew/Cellar/opencv/4.10.0_15/lib/libopencv_highgui.4.10.0.dylib; sourceTree = "<group>"; };
+		327FA63E2D1114B00068307E /* libopencv_imgcodecs.4.10.0.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libopencv_imgcodecs.4.10.0.dylib; path = ../../../../opt/homebrew/Cellar/opencv/4.10.0_15/lib/libopencv_imgcodecs.4.10.0.dylib; sourceTree = "<group>"; };
+		327FA6412D1114F30068307E /* libgdal.36.3.10.0.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libgdal.36.3.10.0.dylib; path = ../../../../opt/homebrew/Cellar/gdal/3.10.0_3/lib/libgdal.36.3.10.0.dylib; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -109,16 +109,14 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				323C78152D0806B500C62C36 /* libgdal.35.3.9.3.dylib in Frameworks */,
 				323C781F2D08072400C62C36 /* libglm.dylib in Frameworks */,
-				323C78222D08074E00C62C36 /* libomp.dylib in Frameworks */,
 				323C78192D0806F400C62C36 /* libGLEW.2.2.0.dylib in Frameworks */,
-				320B27482D0C2B1600B909A2 /* libopencv_imgcodecs.4.10.0.dylib in Frameworks */,
-				323C78172D0806E500C62C36 /* libgdal.35.3.9.3.dylib in Frameworks */,
+				327FA63C2D1114A20068307E /* libopencv_highgui.4.10.0.dylib in Frameworks */,
 				323C781C2D08070E00C62C36 /* libglfw.3.4.dylib in Frameworks */,
-				320B27452D0C2AD100B909A2 /* libopencv_core.4.10.0.dylib in Frameworks */,
+				327FA6392D1114900068307E /* libopencv_core.4.10.0.dylib in Frameworks */,
+				327FA6422D1114F30068307E /* libgdal.36.3.10.0.dylib in Frameworks */,
+				327FA63F2D1114B00068307E /* libopencv_imgcodecs.4.10.0.dylib in Frameworks */,
 				323C78132D08069E00C62C36 /* OpenGL.framework in Frameworks */,
-				320B274E2D0C2BC700B909A2 /* libopencv_highgui.4.10.0.dylib in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -148,6 +146,10 @@
 		323C77E52D0804EB00C62C36 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				327FA6412D1114F30068307E /* libgdal.36.3.10.0.dylib */,
+				327FA63E2D1114B00068307E /* libopencv_imgcodecs.4.10.0.dylib */,
+				327FA63B2D1114A20068307E /* libopencv_highgui.4.10.0.dylib */,
+				327FA6382D1114900068307E /* libopencv_core.4.10.0.dylib */,
 				320B274D2D0C2BC700B909A2 /* libopencv_highgui.4.10.0.dylib */,
 				320B274A2D0C2B8B00B909A2 /* libopencv_imgproc.4.10.0.dylib */,
 				320B27472D0C2B1600B909A2 /* libopencv_imgcodecs.4.10.0.dylib */,
@@ -392,12 +394,11 @@
 				);
 				HEADER_SEARCH_PATHS = (
 					"${glm_header-1.0}",
-					/opt/homebrew/Cellar/libomp/19.1.2/include,
 					"${glew_header-2.2}",
 					"${glfw_header-3.4}",
-					"${gdal_header_3.9}",
+					/opt/homebrew/Cellar/gdal/3.10.0_3/include,
 					/opt/homebrew/Cellar/eigen/3.4.0_1/include/eigen3,
-					/opt/homebrew/Cellar/opencv/4.10.0_12/include/opencv4,
+					/opt/homebrew/Cellar/opencv/4.10.0_15/include/opencv4,
 				);
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
@@ -406,8 +407,8 @@
 					/opt/homebrew/Cellar/glew/2.2.0_1/lib,
 					/opt/homebrew/Cellar/glfw/3.4/lib,
 					/opt/homebrew/Cellar/glm/1.0.1/lib,
-					/opt/homebrew/Cellar/libomp/19.1.2/lib,
-					/opt/homebrew/Cellar/opencv/4.10.0_12/lib,
+					/opt/homebrew/Cellar/opencv/4.10.0_15/lib,
+					/opt/homebrew/Cellar/gdal/3.10.0_3/lib,
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_OBJC_BRIDGING_HEADER = "RSimageprocess-Bridging-Header.h";
@@ -430,12 +431,11 @@
 				);
 				HEADER_SEARCH_PATHS = (
 					"${glm_header-1.0}",
-					/opt/homebrew/Cellar/libomp/19.1.2/include,
 					"${glew_header-2.2}",
 					"${glfw_header-3.4}",
-					"${gdal_header_3.9}",
+					/opt/homebrew/Cellar/gdal/3.10.0_3/include,
 					/opt/homebrew/Cellar/eigen/3.4.0_1/include/eigen3,
-					/opt/homebrew/Cellar/opencv/4.10.0_12/include/opencv4,
+					/opt/homebrew/Cellar/opencv/4.10.0_15/include/opencv4,
 				);
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
@@ -444,8 +444,8 @@
 					/opt/homebrew/Cellar/glew/2.2.0_1/lib,
 					/opt/homebrew/Cellar/glfw/3.4/lib,
 					/opt/homebrew/Cellar/glm/1.0.1/lib,
-					/opt/homebrew/Cellar/libomp/19.1.2/lib,
-					/opt/homebrew/Cellar/opencv/4.10.0_12/lib,
+					/opt/homebrew/Cellar/opencv/4.10.0_15/lib,
+					/opt/homebrew/Cellar/gdal/3.10.0_3/lib,
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_OBJC_BRIDGING_HEADER = "RSimageprocess-Bridging-Header.h";
