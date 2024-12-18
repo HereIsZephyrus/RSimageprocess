@@ -264,7 +264,7 @@ void BPClassifier::backwardFeed(unsigned int loc,const dataVec& neuronInput,cons
 }
 void BPClassifier::Train(const Dataset& dataset) {
     this->featureNum = dataset[0].getFeatures().size();
-    const int classNum = ClassMapper::getClassMap().getTotalNum();
+    this->classNum = ClassMapper::getClassMap().getTotalNum();
     initWeights();
     int maxiter = 100;
     while(maxiter--){

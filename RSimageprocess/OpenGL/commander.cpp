@@ -432,12 +432,14 @@ void Layer::ClassifyImage(ClassifierType classifierType){
         if (classifier == nullptr)
             return;
         classifier->Train(dataset);
+        const std::vector<Band>& bands = raster->getBands();
+        classified = new unsigned char[bands[0].value->height * bands[0].value->width * 3];
         classifier->Classify(raster->getBands(), classified);
         //classifier->Examine(<#const Dataset &samples#>);
     }
     raster->deleteTexture();
     raster->generateClassifiedTexture(classified);
-    delete [] classified;
+    delete[] classified;
 }
 void LayerManager::addLayer(pLayer newLayer) {
     if (head == nullptr) {
