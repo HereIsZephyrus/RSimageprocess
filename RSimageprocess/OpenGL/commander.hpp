@@ -83,6 +83,7 @@ public:
     void supervised();
     void resetBandIndex(){raster->resetIndex();}
     void ClassifyImage(ClassifierType classifierType);
+    void calcDifference(std::shared_ptr<BundleParser> parser);
 };
 class LayerManager{
     using pLayer = std::shared_ptr<Layer>;

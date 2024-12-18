@@ -412,6 +412,30 @@ void Layer::importROI(std::shared_ptr<ROIparser> parser){
         vector->roiCollection.push_back(newObj);
     }
 }
+void Layer::calcDifference(std::shared_ptr<BundleParser> parser){
+    std::vector<Vertex> faceVertices = {
+        {glm::vec3(parser->geographic.downleft.x,parser->geographic.downleft.y,0.0),glm::vec3(1.0,1.0,1.0)},
+        {glm::vec3(parser->geographic.downright.x,parser->geographic.downright.y,0.0),glm::vec3(1.0,1.0,1.0)},
+        {glm::vec3(parser->geographic.upright.x,parser->geographic.upright.y,0.0),glm::vec3(1.0,1.0,1.0)},
+        {glm::vec3(parser->geographic.upleft.x,parser->geographic.upleft.y,0.0),glm::vec3(1.0,1.0,1.0)},
+    };
+    Image inputImage(faceVertices);
+    for (std::unordered_map<int, std::string>::iterator rasterInfo = parser->TIFFpathParser.begin(); rasterInfo != parser->TIFFpathParser.end(); rasterInfo++){
+        std::string imagePath = parser->getBundlePath() + "/" + rasterInfo->second;
+        if (rasterInfo->first > 7)
+            continue;
+        inputImage.LoadNewBand(imagePath,parser->getWaveLength(rasterInfo->first-1));
+    }
+    const std::vector<Band>& bands = raster->getBands();
+    unsigned char* difference = new unsigned char[bands[0].value->height * bands[0].value->width * 3];
+    const int pixelSize = std::stoi(parserRaster->projectionParams.at("GRID_CELL_SIZE_REFLECTIVE"));
+    glm::vec2 bias = (parserRaster->projection.upleft - parser->projection.upleft);
+    bias.x /= pixelSize; bias.y /= pixelSize;
+    raster->calcDifference(inputImage.getBands(),difference,0,bias);
+    if (featureTexture != nullptr)  featureTexture = nullptr;
+    generateClassifiedTexture(difference);
+    delete [] difference;
+}
 void Layer::generateClassifiedTexture(unsigned char *classified){
     const int width = raster->getBands()[0].value->width, height = raster->getBands()[0].value->height;
     GLuint textureID;

@@ -178,6 +178,9 @@ class Image : public Primitive{
     double calcCoefficent(size_t bandind1,size_t bandind2);
     void exportRGBImage(std::string filePath);
     void exportGrayImage(std::string filePath);
+    void calcBasicDifference(const std::vector<Band>& bands, unsigned char* difference,glm::vec2 bias);
+    void calcPCADifference(const std::vector<Band>& bands, unsigned char* difference,glm::vec2 bias);
+    void calcMADDifference(const std::vector<Band>& bands, unsigned char* difference,glm::vec2 bias);
 public:
     explicit Image(const std::vector<Vertex>& faceVertex):
     Primitive(faceVertex,GL_LINE_LOOP,ShaderBucket["line"].get()),textureManager(nullptr),correlation(nullptr){}
@@ -203,6 +206,7 @@ public:
     std::string getTextureStatus(){return textureManager.getStatus();}
     std::string getIndicator(int index){return textureManager.getIndicator(index);}
     bool getToAverage() const {return textureManager.getToAverage();}
+    void calcDifference(const std::vector<Band>& bands, unsigned char* difference,int methodID,glm::vec2 bias);
 };
 struct ClassType{
     std::vector<std::vector<OGRPoint>> position;

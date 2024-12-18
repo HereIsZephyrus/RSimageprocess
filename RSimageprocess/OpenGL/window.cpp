@@ -74,7 +74,7 @@ int initOpenGL(GLFWwindow *&window,std::string windowName) {
 }
 namespace gui {
 ImFont *englishFont = nullptr,*chineseFont = nullptr;
-bool toImportImage = false,toImportROI = false;
+bool toImportImage = false,toImportROI = false,toCalcDifference = false;
 bool toShowStatistic = false,toShowManageBand = false,toShowStrechLevel = false,toShowSpaceFilter = false,toShowUnsupervised = false,toShowSupervised = false,toShowPrecision = false;
 int Initialization(GLFWwindow *window) {
     IMGUI_CHECKVERSION();
@@ -140,6 +140,9 @@ bool DrawPopup(){
         showPrecision();
         return true;
     }
+    if (toCalcDifference){
+        calcDifference();
+    }
     return false;
 }
 void RenderLayerTree(){
@@ -186,7 +189,7 @@ void RenderWorkspace(){
         }
         ImGui::SameLine();
         if (ImGui::Button("计算变化",ButtonSize))
-            toImportROI = true;
+            toCalcDifference = true;
         if (ImGui::Button("查看信息",ButtonSize))
             toShowStatistic = true;
         ImGui::SameLine();
@@ -312,5 +315,32 @@ void SupervisedClassify(){
 void showPrecision(){
     BufferRecorder& buffer = BufferRecorder::getBuffer();
     buffer.selectedLayer->showPrecision();
+}
+void calcDifference(){
+    static char inputBuffer[256] = "";
+    ImGui::PushFont(gui::chineseFont);
+    ImGui::OpenPopup("Import Image");
+    ImVec2 pos = ImGui::GetMainViewport()->GetCenter();
+    ImGui::SetNextWindowPos(pos);
+    if (ImGui::BeginPopup("Import Image")) {
+        ImGui::Text("输入遥感集MTL文件");
+        ImGui::InputText("##input", inputBuffer, sizeof(inputBuffer));
+        if (ImGui::Button("确认")) {
+            pParser parser = std::make_shared<Landsat8BundleParser>(inputBuffer);
+            BufferRecorder& buffer = BufferRecorder::getBuffer();
+            buffer.selectedLayer->calcDifference(parser);
+            inputBuffer[0] = '\0';
+            toCalcDifference = false;
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("取消")) {
+            inputBuffer[0] = '\0';
+            toCalcDifference = false;
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::EndPopup();
+    }
+    ImGui::PopFont();
 }
 }
