@@ -15,6 +15,7 @@
 #include "window.hpp"
 #include "camera.hpp"
 #include "commander.hpp"
+#include "../algorithm/mad_solver.hpp"
 
 std::map<std::string,pShader > ShaderBucket;
 GLchar* filePath(const char* fileName){
@@ -74,8 +75,33 @@ void Shader::linkProgram(){
         std::cerr << "ERROR::SHADER::PROGRAM::LINKING_FAILED\n" << infoLog << std::endl;
     }
 }
-
-Spectum::Spectum(unsigned short* flatd,int w,int h):width(w),height(h){\
+void Spectum::calcNormalize(){
+    normalizedData = new double*[height];
+    unsigned short normalizedMean = static_cast<unsigned short>(CDF[mean] * (SPECT_VALUE_RANGE - 1));
+    double variance = 0;
+    for (int y = 0; y < height; y++){
+        normalizedData[y] = new double[width];
+        for (int x = 0; x < width; x++){
+            if (rawData[y][x] == 0)
+                continue;
+            unsigned short aver = average(y, x);
+            variance += (aver - normalizedMean) * (aver - normalizedMean);
+        }
+    }
+    double stdv = std::sqrt(variance / totalPixel);
+    normalMean = 0;
+    for (int y = 0; y < height; y++)
+        for (int x = 0; x < width; x++){
+            if (rawData[y][x] == 0)
+                normalizedData[y][x] = -999;
+            else{
+                normalizedData[y][x] = (average(y, x) - normalMean) / stdv;
+                normalMean += normalizedData[y][x];
+            }
+        }
+    normalMean /= totalPixel;
+}
+Spectum::Spectum(unsigned short* flatd,int w,int h):width(w),height(h),normalizedData(nullptr){\
     if (width % 2) width--;
     if (height%2)height--;
     rawData = new unsigned short*[height];
@@ -109,7 +135,7 @@ Spectum::Spectum(unsigned short* flatd,int w,int h):width(w),height(h){\
     }
     strechRange.first = 0; strechRange.second = SPECT_VALUE_RANGE - 1;\
 }
-Spectum::Spectum(const cv::Mat& image){
+Spectum::Spectum(const cv::Mat& image):normalizedData(nullptr){
     width = image.cols; height = image.rows;\
     if (width % 2) width--;
     if (height%2)height--;
@@ -609,29 +635,24 @@ std::string TextureManager::getStatus(){
     }
     return status;
 }
-double Image::calcCoefficent(size_t bandind1,size_t bandind2){
-    unsigned short **banddata1 = bands[bandind1].value->rawData;
-    unsigned short **banddata2 = bands[bandind2].value->rawData;
-    int width = bands[bandind1].value->width, height = bands[bandind1].value->height;
-    int totalPixel = bands[bandind1].value->totalPixel;
-    double mean1 = bands[bandind1].value->mean, mean2 = bands[bandind2].value->mean;
+double Image::calcCorrelationCoefficent(std::shared_ptr<Spectum> band1,std::shared_ptr<Spectum> band2){
+    if (band1->normalizedData == nullptr)   band1->calcNormalize();
+    if (band2->normalizedData == nullptr)   band2->calcNormalize();
+    double **banddata1 = band1->normalizedData;
+    double **banddata2 = band2->normalizedData;
+    int width = band1->width, height = band1->height;
+    int totalPixel = 0;
+    double mean1 = band1->normalMean, mean2 = band2->normalMean;
     double covariance = 0.0;
-    double variance1 = 0.0, variance2 = 0.0;
     for (int y = 0; y < height; y++)
         for (int x = 0; x < width; x++){
-            if (banddata1[y][x] == 0 || banddata2[y][x] == 0)
-                continue;;
+            if (banddata1[y][x] == -999 || banddata2[y][x] == -999)
+                continue;
             covariance += (banddata1[y][x] - mean1) * (banddata2[y][x] - mean2);
-            variance1 += (banddata1[y][x] - mean1) * (banddata1[y][x] - mean1);
-            variance2 += (banddata2[y][x] - mean2) * (banddata2[y][x] - mean2);
+            ++totalPixel;
         }
     covariance /= totalPixel;
-    variance1 /= totalPixel;
-    variance2 /= totalPixel;
-    double stddev1 = std::sqrt(variance1);
-    double stddev2 = std::sqrt(variance2);
-    double coefficent = covariance / (stddev1 * stddev2);
-    return coefficent;
+    return covariance;
 }
 void Image::calcBandCoefficent(){
     const size_t size = bands.size();
@@ -641,7 +662,7 @@ void Image::calcBandCoefficent(){
     for (size_t i = 0; i < size; i++){
         correlation[i][i] = 1;
         for (size_t j = i + 1; j < size; j++){
-            double coefficent = calcCoefficent(i, j);
+            double coefficent = calcCorrelationCoefficent(bands[i].value, bands[j].value);
             correlation[i][j] = coefficent;
             correlation[j][i] = coefficent;
         }
@@ -808,7 +829,28 @@ void Image::calcPCADifference(const std::vector<Band>& inputBands, unsigned char
     
 }
 void Image::calcMADDifference(const std::vector<Band>& inputBands, unsigned char* difference,glm::vec2 bias){
-    
+    MADSolver& solver = MADSolver::getSolver();
+    int bandNum = static_cast<int>(bands.size());
+    MatrixXd convXX(bandNum,bandNum),convYY(bandNum,bandNum),convXY(bandNum,bandNum);
+    for (int i = 0; i < bandNum; i++){
+        convXX(i,i) = 1; convYY(i,i) = 1;
+        convXY(i,i) = calcCorrelationCoefficent(bands[i].value, inputBands[i].value);
+        for (int j = i + 1; j < bandNum; j++){
+            double convxx = calcCorrelationCoefficent(bands[i].value, bands[j].value);
+            double convyy = calcCorrelationCoefficent(inputBands[i].value, inputBands[j].value);
+            double convxy = calcCorrelationCoefficent(bands[i].value, inputBands[j].value);
+            convXX(i,j) = convxx;   convXX(j,i) = convxx;
+            convYY(i,j) = convyy;   convYY(j,i) = convyy;
+            convXY(i,j) = convxy;   convXY(j,i) = convxy;
+        }
+    }
+    MatrixXd revConvXX = calcMatrixPowerNegHalf(convXX),revConvYY = calcMatrixPowerNegHalf(convYY);
+    //std::cout<<"revConvXX"<<std::endl<<revConvXX<<"revConvYY"<<std::endl<<revConvYY<<std::endl;
+    MatrixXd M = revConvXX * convXY * revConvYY;
+    JacobiSVD<MatrixXd> svd(M, ComputeThinU | ComputeThinV);
+    solver.maxSingularValue = svd.singularValues()(0);
+    solver.leftSingularVector = svd.matrixU().col(0);
+    solver.rightSingularVector = svd.matrixV().col(0);
 }
 void Image::calcDifference(const std::vector<Band>& inputBands, unsigned char* difference,int methodID,glm::vec2 bias){
     if (methodID == 0)

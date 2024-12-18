@@ -8,9 +8,9 @@
 #include "commander.hpp"
 #include "window.hpp"
 #include "../interface.hpp"
-#include "../classification/classifybase.hpp"
-#include "../classification/unsupervise_classifier.hpp"
-#include "../classification/supervise_classifier.hpp"
+#include "../algorithm/classifybase.hpp"
+#include "../algorithm/unsupervise_classifier.hpp"
+#include "../algorithm/supervise_classifier.hpp"
 
 void BufferRecorder::initIO(GLFWwindow* window){
     memset(keyRecord, GL_FALSE, sizeof(keyRecord));
@@ -431,7 +431,7 @@ void Layer::calcDifference(std::shared_ptr<BundleParser> parser){
     const int pixelSize = std::stoi(parserRaster->projectionParams.at("GRID_CELL_SIZE_REFLECTIVE"));
     glm::vec2 bias = (parserRaster->projection.upleft - parser->projection.upleft);
     bias.x /= pixelSize; bias.y /= pixelSize;
-    raster->calcDifference(inputImage.getBands(),difference,0,bias);
+    raster->calcDifference(inputImage.getBands(),difference,2,bias);
     if (featureTexture != nullptr)  featureTexture = nullptr;
     generateClassifiedTexture(difference);
     delete [] difference;
@@ -612,4 +612,14 @@ void LayerManager::draw(){
             current->draw();
         current = current->prev;
     }
+}
+MatrixXd calcMatrixPowerNegHalf(const MatrixXd& conv) {
+    SelfAdjointEigenSolver<MatrixXd> eigenSolver(conv);
+    if (eigenSolver.info() != Success)
+        throw std::runtime_error("Eigenvalue decomposition failed.");
+    VectorXd eigenValues = eigenSolver.eigenvalues();
+    MatrixXd eigenVectors = eigenSolver.eigenvectors();
+    VectorXd eigenValuesInverseSqrt = eigenValues.array().sqrt().inverse();
+    MatrixXd D = eigenValuesInverseSqrt.asDiagonal();
+    return eigenVectors * D * eigenVectors.transpose();
 }

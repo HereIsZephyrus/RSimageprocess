@@ -32,10 +32,10 @@ enum class StrechLevel{
 typedef std::pair<unsigned short,unsigned short> SpectumRange;
 struct Spectum{
     unsigned short **rawData;
+    double **normalizedData;
     unsigned short maxVal,minVal;
     int width,height,totalPixel;
-    double mean;
-    //glm::vec2 validRange[4];
+    double mean,normalMean;
     Spectum(unsigned short* flatd,int w,int h); //deprecated at this time
     Spectum(const cv::Mat& image);
     SpectumRange strechRange;
@@ -43,6 +43,7 @@ struct Spectum{
     float HistHeight;
     unsigned short average(int y,int x);
     unsigned short strech(int y,int x);
+    void calcNormalize();
     SpectumRange setStrech(StrechLevel level);
     ~Spectum();
 };
@@ -175,7 +176,7 @@ class Image : public Primitive{
     TextureManager textureManager;
     double **correlation;
     void calcBandCoefficent();
-    double calcCoefficent(size_t bandind1,size_t bandind2);
+    double calcCorrelationCoefficent(std::shared_ptr<Spectum> band1,std::shared_ptr<Spectum> band2);
     void exportRGBImage(std::string filePath);
     void exportGrayImage(std::string filePath);
     void calcBasicDifference(const std::vector<Band>& bands, unsigned char* difference,glm::vec2 bias);

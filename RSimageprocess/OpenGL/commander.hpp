@@ -22,7 +22,7 @@
 #include "graphing.hpp"
 #include "camera.hpp"
 #include "../interface.hpp"
-#include "../classification/classifybase.hpp"
+#include "../algorithm/classifybase.hpp"
 
 enum class ClassifierType{
     fisher,
@@ -129,4 +129,5 @@ private:
 };
 void scrollCallback(GLFWwindow* window, double xoffset, double yoffset);
 void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods);
+MatrixXd calcMatrixPowerNegHalf(const MatrixXd& A);
 #endif /* commander_hpp */
