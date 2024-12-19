@@ -5,6 +5,7 @@
 //  Created by ChanningTong on 12/18/24.
 //
 
+#include <iostream>
 #include "mad_solver.hpp"
 
 void MADSolver::calcInitMAD(const MatrixXd& convXX,const MatrixXd& convXY,const MatrixXd& convYY){
@@ -44,7 +45,7 @@ MatrixXd MADSolver::calcMatrixPowerNegHalf(const MatrixXd& conv) {
     return eigenVectors * D * eigenVectors.transpose();
 }
 void MADSolver::calcChangeSignal(){
-    const double chi2Statistic = ChiSquareProb[bandNum][2]; //p = 0.05
+    const double chi2Statistic = ChiSquareProb[detectNum-1][3]; //p = 0.01
     const int height = static_cast<int>(Z.size()),width = static_cast<int>(Z[0].size());
     changed.clear();
     changed.assign(height, std::vector<bool>(width,0));

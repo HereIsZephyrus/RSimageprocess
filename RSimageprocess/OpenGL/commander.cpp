@@ -440,6 +440,15 @@ void Layer::calcDifference(std::shared_ptr<BundleParser> parser){
     featureTexture = diffTexture.back();
     diffTexture.pop_back();
 }
+void Layer::calcDifference(std::shared_ptr<Layer> inputLayer){
+    const int pixelSize = std::stoi(parserRaster->projectionParams.at("GRID_CELL_SIZE_REFLECTIVE"));
+    glm::vec2 bias = (parserRaster->projection.upleft - inputLayer->parserRaster->projection.upleft);
+    bias.x /= pixelSize; bias.y /= pixelSize;
+    if (!diffTexture.empty())  diffTexture.clear();
+    diffTexture = raster->calcDifference(inputLayer->raster->getBands(),2,bias);
+    featureTexture = diffTexture.back();
+    diffTexture.pop_back();
+}
 std::shared_ptr<Texture> Layer::generateClassifiedTexture(unsigned char *classified){
     const int width = raster->getBands()[0].value->width, height = raster->getBands()[0].value->height;
     GLuint textureID;
@@ -579,7 +588,7 @@ void LayerManager::moveLayerDown(pLayer swapLayer) {
         head = nextLayer;
 }
 void LayerManager::printLayerTree(){
-    pLayer current = head;
+    pLayer current = tail;
     const ImGuiTreeNodeFlags layerFlag = ImGuiTreeNodeFlags_DefaultOpen;
     while (current != nullptr){
         bool isOpen = ImGui::TreeNodeEx(current->getName().c_str(), layerFlag);
@@ -607,7 +616,7 @@ void LayerManager::printLayerTree(){
                 BufferRecorder::getBuffer().selectedLayer = current;
             ImGui::TreePop();
         }
-        current = current->next;
+        current = current->prev;
     }
 }
 void LayerManager::draw(){
@@ -617,4 +626,25 @@ void LayerManager::draw(){
             current->draw();
         current = current->prev;
     }
+}
+std::shared_ptr<Layer> LayerManager::renderRestLayers(){
+    BufferRecorder& buffer = BufferRecorder::getBuffer();
+    pLayer current = tail;
+    ImGui::BeginChild("##selectable table", ImVec2(200, 70), true);
+    static pLayer selectedAddItem = buffer.selectedLayer;
+    while (current != nullptr){
+        if (current == buffer.selectedLayer){
+            current = current->prev;
+            continue;
+        }
+        bool isSelected = (selectedAddItem == current);
+        if (ImGui::Selectable(current->getLayerName().c_str(),isSelected)) {
+            selectedAddItem = current;
+            if (isSelected)
+                ImGui::SetItemDefaultFocus();
+        }
+        current = current->prev;
+    }
+    ImGui::EndChild();
+    return selectedAddItem;
 }

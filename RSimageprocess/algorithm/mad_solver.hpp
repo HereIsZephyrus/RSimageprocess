@@ -19,7 +19,7 @@ public:
     }
     MADSolver(const MADSolver&) = delete;
     void operator = (const MADSolver) = delete;
-    int bandNum;
+    int bandNum,detectNum;
     std::vector<double> rho;
     std::vector<VectorXd> A,B;
     std::vector<dataMat> dataVec;
@@ -34,7 +34,7 @@ private:
     MatrixXd calcMatrixPowerNegHalf(const MatrixXd& conv);
     dataMat ChiSquareProb;
     MADSolver(){
-        //range N from 1 to 20: 0.1,0.05,0.025,0.010.005
+        //range N from 1 to 20: 0.1,0.05,0.025,0.01,0.005
         ChiSquareProb = {
             {2.706,3.841,5.024,6.635,7.879},
             {4.605,5.991,7.378,9.210,10.597},

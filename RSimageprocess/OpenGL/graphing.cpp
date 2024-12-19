@@ -234,12 +234,16 @@ SpectumRange Spectum::setStrech(StrechLevel level){
     return strechRange;
 }
 Spectum::~Spectum(){
-    for (size_t h = 0; h < height; h++)
-        delete[] rawData[h];
-    delete[] rawData;
-    for (size_t h = 0; h < height; h++)
-        delete[] normalizedData[h];
-    delete[] normalizedData;
+    if (rawData != nullptr){
+        for (size_t h = 0; h < height; h++)
+            delete[] rawData[h];
+        delete[] rawData;
+    }
+    if (normalizedData != nullptr){
+        for (size_t h = 0; h < height; h++)
+            delete[] normalizedData[h];
+        delete[] normalizedData;
+    }
 }
 void Primitive::initResource(GLenum shp,Shader* inputshader){
     transMat = glm::mat4(1.0f);
@@ -849,6 +853,7 @@ std::vector<std::shared_ptr<Texture>> Image::calcMADDifference(const std::vector
     MADSolver& solver = MADSolver::getSolver();
     solver.bandNum = static_cast<int>(bands.size());
     const int bandNum = solver.bandNum;
+    solver.detectNum = 2;
     MatrixXd convXX(bandNum,bandNum),convYY(bandNum,bandNum),convXY(bandNum,bandNum);
     for (int i = 0; i < bandNum; i++){
         convXX(i,i) = 1; convYY(i,i) = 1;
@@ -894,13 +899,14 @@ std::vector<std::shared_ptr<Texture>> Image::calcMADDifference(const std::vector
                     continue;
                 }
                 diff = abs(diff);
-                solver.Z[y][x] += (diff / rho) * (diff / rho);
+                if (MADindex < solver.detectNum)
+                    solver.Z[y][x] += (diff / rho) * (diff / rho);
                 if (diff < minDIff)    minDIff = diff;
                 if (diff > maxDiff)    maxDiff = diff;
             }
         for (int i = 0; i < width * height; i++)
             if (tempDiff[i] == NODATA)
-                difference[i ] = 0;
+                difference[i] = 0;
             else
                 difference[i] = static_cast<unsigned char>((tempDiff[i] - minDIff) / (maxDiff - minDIff) * 255);
         GLuint textureID;
@@ -921,7 +927,10 @@ std::vector<std::shared_ptr<Texture>> Image::calcMADDifference(const std::vector
     for (int y = 0; y < height; y++)
         for (int x = 0; x < width; x++){
             int loc = y * width + x;
-            difference[loc] = solver.changed[y][x];
+            if (solver.changed[y][x])
+                difference[loc] = 255;
+            else
+                difference[loc] = 0;
         }
     GLuint textureID;
     glGenTextures(1, &textureID);

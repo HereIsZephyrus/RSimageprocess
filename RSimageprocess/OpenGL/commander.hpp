@@ -61,6 +61,7 @@ public:
     std::string getName() const{return name;}
     std::shared_ptr<Layer> prev,next;
     Extent getExtent() const{return raster->getExtent();}
+    std::string getLayerName() const {return name;}
     bool getLayerVisble() const {return layerVisble;}
     void toggleLayerVisble() {layerVisble = !layerVisble;}
     bool getROIVisble() const {return roiVisible;}
@@ -71,6 +72,7 @@ public:
     void toggleDiffVisble() {diffVisible = !diffVisible;}
     bool hasROI() const {return vector != nullptr;}
     bool hasClassified() const {return classifier != nullptr;}
+    bool hasFeature() const {return featureTexture != nullptr;}
     bool hasDiff() const {return !diffTexture.empty();}
     void showStatistic() const;
     void showPrecision() const;
@@ -88,6 +90,7 @@ public:
     void resetBandIndex(){raster->resetIndex();}
     void ClassifyImage(ClassifierType classifierType);
     void calcDifference(std::shared_ptr<BundleParser> parser);
+    void calcDifference(std::shared_ptr<Layer> inputLayer);
 };
 class LayerManager{
     using pLayer = std::shared_ptr<Layer>;
@@ -114,6 +117,7 @@ public:
     void moveLayerUp(pLayer swapLayer);
     void moveLayerDown(pLayer swapLayer);
     void printLayerTree();
+    std::shared_ptr<Layer> renderRestLayers();
     void draw();
 };
 class BufferRecorder{

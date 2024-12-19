@@ -218,7 +218,7 @@ void RenderWorkspace(){
         if (ImGui::Button("监督分类",ButtonSize)){
             toShowSupervised = true;
         }
-        if (buffer.selectedLayer->hasClassified()){
+        if (buffer.selectedLayer->hasFeature()){
             visbleButtonStr = "隐藏特征";
             if (!buffer.selectedLayer->getFeatureVisble())
                 visbleButtonStr = "显示特征";
@@ -333,19 +333,32 @@ void calcDifference(){
     ImVec2 pos = ImGui::GetMainViewport()->GetCenter();
     ImGui::SetNextWindowPos(pos);
     if (ImGui::BeginPopup("Import Image")) {
+        BufferRecorder& buffer = BufferRecorder::getBuffer();
         ImGui::Text("输入遥感集MTL文件");
         ImGui::InputText("##input", inputBuffer, sizeof(inputBuffer));
-        if (ImGui::Button("确认")) {
+        if (ImGui::Button("确认##input")) {
             pParser parser = std::make_shared<Landsat8BundleParser>(inputBuffer);
-            BufferRecorder& buffer = BufferRecorder::getBuffer();
             buffer.selectedLayer->calcDifference(parser);
             inputBuffer[0] = '\0';
             toCalcDifference = false;
             ImGui::CloseCurrentPopup();
         }
         ImGui::SameLine();
-        if (ImGui::Button("取消")) {
+        if (ImGui::Button("取消##input")) {
             inputBuffer[0] = '\0';
+            toCalcDifference = false;
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::Text("选择目标图层文件:");
+        LayerManager& layerManeger = LayerManager::getLayers();
+        std::shared_ptr<Layer> selectedLayer = layerManeger.renderRestLayers();
+        if (ImGui::Button("确认##select")) {
+            buffer.selectedLayer->calcDifference(selectedLayer);
+            toCalcDifference = false;
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("取消##select")) {
             toCalcDifference = false;
             ImGui::CloseCurrentPopup();
         }
@@ -355,10 +368,10 @@ void calcDifference(){
 }
 void drawSelectPanel(){
     MADSolver& solver = MADSolver::getSolver();
-    std::string windowStr = "current MAD : " + std::to_string(solver.showIndex);
+    std::string windowStr = "current MAD : " + std::to_string(solver.showIndex + 1);
     ImGui::Begin(windowStr.c_str(),nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse);
     ImGui::SetWindowPos(ImVec2(ImGui::GetIO().DisplaySize.x / 2 - 100, 10));
-    ImGui::SetWindowSize(ImVec2(200, 80));
+    ImGui::SetWindowSize(ImVec2(180, 60));
     if (ImGui::ArrowButton("##decrease MAD select index", ImGuiDir_Left))
         solver.decreaseIndex();
     ImGui::SameLine();
