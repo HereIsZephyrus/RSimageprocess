@@ -19,7 +19,7 @@ public:
     }
     MADSolver(const MADSolver&) = delete;
     void operator = (const MADSolver) = delete;
-    int bandNum,detectNum;
+    int bandNum;
     std::vector<double> rho;
     std::vector<VectorXd> A,B;
     std::vector<dataMat> dataVec;
@@ -28,7 +28,7 @@ public:
     std::vector<std::vector<bool>> changed;
     void calcInitMAD(const MatrixXd& convXX,const MatrixXd& convXY,const MatrixXd& convYY);
     void decreaseIndex(){if (showIndex > 0)  --showIndex;}
-    void increaseIndex(){if (showIndex < bandNum - 1)    ++showIndex;}
+    void increaseIndex(){if (showIndex < bandNum)    ++showIndex;}
     void calcChangeSignal();
 private:
     MatrixXd calcMatrixPowerNegHalf(const MatrixXd& conv);

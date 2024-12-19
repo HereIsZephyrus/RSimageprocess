@@ -45,7 +45,7 @@ MatrixXd MADSolver::calcMatrixPowerNegHalf(const MatrixXd& conv) {
     return eigenVectors * D * eigenVectors.transpose();
 }
 void MADSolver::calcChangeSignal(){
-    const double chi2Statistic = ChiSquareProb[detectNum-1][3]; //p = 0.01
+    const double chi2Statistic = ChiSquareProb[bandNum-1][4]; //p = 0.001
     const int height = static_cast<int>(Z.size()),width = static_cast<int>(Z[0].size());
     changed.clear();
     changed.assign(height, std::vector<bool>(width,0));

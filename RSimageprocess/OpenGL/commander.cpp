@@ -588,7 +588,7 @@ void LayerManager::moveLayerDown(pLayer swapLayer) {
         head = nextLayer;
 }
 void LayerManager::printLayerTree(){
-    pLayer current = tail;
+    pLayer current = head;
     const ImGuiTreeNodeFlags layerFlag = ImGuiTreeNodeFlags_DefaultOpen;
     while (current != nullptr){
         bool isOpen = ImGui::TreeNodeEx(current->getName().c_str(), layerFlag);
@@ -616,15 +616,15 @@ void LayerManager::printLayerTree(){
                 BufferRecorder::getBuffer().selectedLayer = current;
             ImGui::TreePop();
         }
-        current = current->prev;
+        current = current->next;
     }
 }
 void LayerManager::draw(){
-    pLayer current = tail;
+    pLayer current = head;
     while (current != nullptr){
         if (current->getLayerVisble())
             current->draw();
-        current = current->prev;
+        current = current->next;
     }
 }
 std::shared_ptr<Layer> LayerManager::renderRestLayers(){

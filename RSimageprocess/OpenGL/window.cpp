@@ -377,6 +377,13 @@ void drawSelectPanel(){
     ImGui::SameLine();
     if (ImGui::ArrowButton("##increase Mad Select index", ImGuiDir_Right))
         solver.increaseIndex();
+    ImGui::SameLine();
+    std::stringstream oss;
+    if (solver.showIndex < solver.bandNum)
+        oss<<"rho = "<<std::setprecision(6)<<solver.rho[solver.showIndex];
+    else
+        oss<<"pseudocolr";
+    ImGui::Text("%s",oss.str().c_str());
     ImGui::End();
 }
 }
