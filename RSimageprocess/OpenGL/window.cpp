@@ -14,6 +14,7 @@
 #include "window.hpp"
 #include "graphing.hpp"
 #include "commander.hpp"
+#include "../algorithm/mad_solver.hpp"
 
 void WindowParas::InitParas(){
     glfwGetWindowContentScale(window, &xScale, &yScale);
@@ -74,7 +75,7 @@ int initOpenGL(GLFWwindow *&window,std::string windowName) {
 }
 namespace gui {
 ImFont *englishFont = nullptr,*chineseFont = nullptr;
-bool toImportImage = false,toImportROI = false;
+bool toImportImage = false,toImportROI = false,toCalcDifference = false;
 bool toShowStatistic = false,toShowManageBand = false,toShowStrechLevel = false,toShowSpaceFilter = false,toShowUnsupervised = false,toShowSupervised = false,toShowPrecision = false;
 int Initialization(GLFWwindow *window) {
     IMGUI_CHECKVERSION();
@@ -140,6 +141,10 @@ bool DrawPopup(){
         showPrecision();
         return true;
     }
+    if (toCalcDifference){
+        calcDifference();
+        return true;
+    }
     return false;
 }
 void RenderLayerTree(){
@@ -186,7 +191,7 @@ void RenderWorkspace(){
         }
         ImGui::SameLine();
         if (ImGui::Button("计算变化",ButtonSize))
-            toImportROI = true;
+            toCalcDifference = true;
         if (ImGui::Button("查看信息",ButtonSize))
             toShowStatistic = true;
         ImGui::SameLine();
@@ -213,16 +218,24 @@ void RenderWorkspace(){
         if (ImGui::Button("监督分类",ButtonSize)){
             toShowSupervised = true;
         }
-        visbleButtonStr = "隐藏特征";
-        if (!buffer.selectedLayer->getFeatureVisble())
-            visbleButtonStr = "显示特征";
-        if (buffer.selectedLayer->hasClassified())
+        if (buffer.selectedLayer->hasFeature()){
+            visbleButtonStr = "隐藏特征";
+            if (!buffer.selectedLayer->getFeatureVisble())
+                visbleButtonStr = "显示特征";
             if (ImGui::Button(visbleButtonStr.c_str(),ButtonSize))
                 buffer.selectedLayer->toggleFeatureVisble();
+        }
         ImGui::SameLine();
         if (buffer.selectedLayer->hasClassified())
             if (ImGui::Button("显示精度",ButtonSize))
                 toShowPrecision = true;
+        if (buffer.selectedLayer->hasDiff()){
+            visbleButtonStr = "隐藏差图";
+            if (!buffer.selectedLayer->getDiffVisble())
+                visbleButtonStr = "显示差图";
+            if (ImGui::Button(visbleButtonStr.c_str(),ButtonSize))
+                buffer.selectedLayer->toggleDiffVisble();
+        }
     }
     style.FramePadding = ImVec2(4.0f, 2.0f);
     style.ItemSpacing = ImVec2(8.0f, 4.0f);
@@ -312,5 +325,58 @@ void SupervisedClassify(){
 void showPrecision(){
     BufferRecorder& buffer = BufferRecorder::getBuffer();
     buffer.selectedLayer->showPrecision();
+}
+void calcDifference(){
+    static char inputBuffer[256] = "";
+    ImGui::PushFont(gui::chineseFont);
+    ImGui::OpenPopup("Import Image");
+    ImVec2 pos = ImGui::GetMainViewport()->GetCenter();
+    ImGui::SetNextWindowPos(pos);
+    if (ImGui::BeginPopup("Import Image")) {
+        BufferRecorder& buffer = BufferRecorder::getBuffer();
+        ImGui::Text("输入遥感集MTL文件");
+        ImGui::InputText("##input", inputBuffer, sizeof(inputBuffer));
+        if (ImGui::Button("确认##input")) {
+            pParser parser = std::make_shared<Landsat8BundleParser>(inputBuffer);
+            buffer.selectedLayer->calcDifference(parser);
+            inputBuffer[0] = '\0';
+            toCalcDifference = false;
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("取消##input")) {
+            inputBuffer[0] = '\0';
+            toCalcDifference = false;
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::Text("选择目标图层文件:");
+        LayerManager& layerManeger = LayerManager::getLayers();
+        std::shared_ptr<Layer> selectedLayer = layerManeger.renderRestLayers();
+        if (ImGui::Button("确认##select")) {
+            buffer.selectedLayer->calcDifference(selectedLayer);
+            toCalcDifference = false;
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("取消##select")) {
+            toCalcDifference = false;
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::EndPopup();
+    }
+    ImGui::PopFont();
+}
+void drawSelectPanel(){
+    MADSolver& solver = MADSolver::getSolver();
+    std::string windowStr = "current MAD : " + std::to_string(solver.showIndex + 1);
+    ImGui::Begin(windowStr.c_str(),nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse);
+    ImGui::SetWindowPos(ImVec2(ImGui::GetIO().DisplaySize.x / 2 - 100, 10));
+    ImGui::SetWindowSize(ImVec2(180, 60));
+    if (ImGui::ArrowButton("##decrease MAD select index", ImGuiDir_Left))
+        solver.decreaseIndex();
+    ImGui::SameLine();
+    if (ImGui::ArrowButton("##increase Mad Select index", ImGuiDir_Right))
+        solver.increaseIndex();
+    ImGui::End();
 }
 }

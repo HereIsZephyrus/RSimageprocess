@@ -7,7 +7,7 @@
 
 #ifndef graphing_hpp
 #define graphing_hpp
-
+#define NODATA -999
 #define GLEW_STATIC
 #define SPECT_VALUE_RANGE 65536
 #include <gdal.h>
@@ -32,10 +32,10 @@ enum class StrechLevel{
 typedef std::pair<unsigned short,unsigned short> SpectumRange;
 struct Spectum{
     unsigned short **rawData;
+    double **normalizedData;
     unsigned short maxVal,minVal;
     int width,height,totalPixel;
-    double mean;
-    //glm::vec2 validRange[4];
+    double mean,normalMean;
     Spectum(unsigned short* flatd,int w,int h); //deprecated at this time
     Spectum(const cv::Mat& image);
     SpectumRange strechRange;
@@ -43,6 +43,7 @@ struct Spectum{
     float HistHeight;
     unsigned short average(int y,int x);
     unsigned short strech(int y,int x);
+    void calcNormalize();
     SpectumRange setStrech(StrechLevel level);
     ~Spectum();
 };
@@ -175,9 +176,12 @@ class Image : public Primitive{
     TextureManager textureManager;
     double **correlation;
     void calcBandCoefficent();
-    double calcCoefficent(size_t bandind1,size_t bandind2);
+    double calcCorrelationCoefficent(std::shared_ptr<Spectum> band1,std::shared_ptr<Spectum> band2);
     void exportRGBImage(std::string filePath);
     void exportGrayImage(std::string filePath);
+    std::vector<std::shared_ptr<Texture>> calcBasicDifference(const std::vector<Band>& bands, glm::vec2 bias);
+    std::vector<std::shared_ptr<Texture>> calcPCADifference(const std::vector<Band>& bands, glm::vec2 bias);
+    std::vector<std::shared_ptr<Texture>> calcMADDifference(const std::vector<Band>& bands, glm::vec2 bias);
 public:
     explicit Image(const std::vector<Vertex>& faceVertex):
     Primitive(faceVertex,GL_LINE_LOOP,ShaderBucket["line"].get()),textureManager(nullptr),correlation(nullptr){}
@@ -203,6 +207,7 @@ public:
     std::string getTextureStatus(){return textureManager.getStatus();}
     std::string getIndicator(int index){return textureManager.getIndicator(index);}
     bool getToAverage() const {return textureManager.getToAverage();}
+    std::vector<std::shared_ptr<Texture>> calcDifference(const std::vector<Band>& bands,int methodID,glm::vec2 bias);
 };
 struct ClassType{
     std::vector<std::vector<OGRPoint>> position;

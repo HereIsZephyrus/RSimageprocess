@@ -15,6 +15,7 @@
 #include "window.hpp"
 #include "camera.hpp"
 #include "commander.hpp"
+#include "../algorithm/mad_solver.hpp"
 
 std::map<std::string,pShader > ShaderBucket;
 GLchar* filePath(const char* fileName){
@@ -74,8 +75,33 @@ void Shader::linkProgram(){
         std::cerr << "ERROR::SHADER::PROGRAM::LINKING_FAILED\n" << infoLog << std::endl;
     }
 }
-
-Spectum::Spectum(unsigned short* flatd,int w,int h):width(w),height(h){\
+void Spectum::calcNormalize(){
+    normalizedData = new double*[height];
+    unsigned short normalizedMean = static_cast<unsigned short>(CDF[mean] * (SPECT_VALUE_RANGE - 1));
+    double variance = 0;
+    for (int y = 0; y < height; y++){
+        normalizedData[y] = new double[width];
+        for (int x = 0; x < width; x++){
+            if (rawData[y][x] == 0)
+                continue;
+            unsigned short aver = average(y, x);
+            variance += (aver - normalizedMean) * (aver - normalizedMean);
+        }
+    }
+    double stdv = std::sqrt(variance / totalPixel);
+    normalMean = 0;
+    for (int y = 0; y < height; y++)
+        for (int x = 0; x < width; x++){
+            if (rawData[y][x] == 0)
+                normalizedData[y][x] = NODATA;
+            else{
+                normalizedData[y][x] = (average(y, x) - normalMean) / stdv;
+                normalMean += normalizedData[y][x];
+            }
+        }
+    normalMean /= totalPixel;
+}
+Spectum::Spectum(unsigned short* flatd,int w,int h):width(w),height(h),normalizedData(nullptr){\
     if (width % 2) width--;
     if (height%2)height--;
     rawData = new unsigned short*[height];
@@ -109,7 +135,7 @@ Spectum::Spectum(unsigned short* flatd,int w,int h):width(w),height(h){\
     }
     strechRange.first = 0; strechRange.second = SPECT_VALUE_RANGE - 1;\
 }
-Spectum::Spectum(const cv::Mat& image){
+Spectum::Spectum(const cv::Mat& image):normalizedData(nullptr){
     width = image.cols; height = image.rows;\
     if (width % 2) width--;
     if (height%2)height--;
@@ -208,10 +234,16 @@ SpectumRange Spectum::setStrech(StrechLevel level){
     return strechRange;
 }
 Spectum::~Spectum(){
-    for (size_t h = 0; h < height; h++)
-        delete[] rawData[h];
-    delete[] rawData;
-    //delete[] showData;
+    if (rawData != nullptr){
+        for (size_t h = 0; h < height; h++)
+            delete[] rawData[h];
+        delete[] rawData;
+    }
+    if (normalizedData != nullptr){
+        for (size_t h = 0; h < height; h++)
+            delete[] normalizedData[h];
+        delete[] normalizedData;
+    }
 }
 void Primitive::initResource(GLenum shp,Shader* inputshader){
     transMat = glm::mat4(1.0f);
@@ -609,29 +641,24 @@ std::string TextureManager::getStatus(){
     }
     return status;
 }
-double Image::calcCoefficent(size_t bandind1,size_t bandind2){
-    unsigned short **banddata1 = bands[bandind1].value->rawData;
-    unsigned short **banddata2 = bands[bandind2].value->rawData;
-    int width = bands[bandind1].value->width, height = bands[bandind1].value->height;
-    int totalPixel = bands[bandind1].value->totalPixel;
-    double mean1 = bands[bandind1].value->mean, mean2 = bands[bandind2].value->mean;
+double Image::calcCorrelationCoefficent(std::shared_ptr<Spectum> band1,std::shared_ptr<Spectum> band2){
+    if (band1->normalizedData == nullptr)   band1->calcNormalize();
+    if (band2->normalizedData == nullptr)   band2->calcNormalize();
+    double **banddata1 = band1->normalizedData;
+    double **banddata2 = band2->normalizedData;
+    int width = band1->width, height = band1->height;
+    int totalPixel = 0;
+    double mean1 = band1->normalMean, mean2 = band2->normalMean;
     double covariance = 0.0;
-    double variance1 = 0.0, variance2 = 0.0;
     for (int y = 0; y < height; y++)
         for (int x = 0; x < width; x++){
-            if (banddata1[y][x] == 0 || banddata2[y][x] == 0)
-                continue;;
+            if (banddata1[y][x] == NODATA || banddata2[y][x] == NODATA)
+                continue;
             covariance += (banddata1[y][x] - mean1) * (banddata2[y][x] - mean2);
-            variance1 += (banddata1[y][x] - mean1) * (banddata1[y][x] - mean1);
-            variance2 += (banddata2[y][x] - mean2) * (banddata2[y][x] - mean2);
+            ++totalPixel;
         }
     covariance /= totalPixel;
-    variance1 /= totalPixel;
-    variance2 /= totalPixel;
-    double stddev1 = std::sqrt(variance1);
-    double stddev2 = std::sqrt(variance2);
-    double coefficent = covariance / (stddev1 * stddev2);
-    return coefficent;
+    return covariance;
 }
 void Image::calcBandCoefficent(){
     const size_t size = bands.size();
@@ -641,7 +668,7 @@ void Image::calcBandCoefficent(){
     for (size_t i = 0; i < size; i++){
         correlation[i][i] = 1;
         for (size_t j = i + 1; j < size; j++){
-            double coefficent = calcCoefficent(i, j);
+            double coefficent = calcCorrelationCoefficent(bands[i].value, bands[j].value);
             correlation[i][j] = coefficent;
             correlation[j][i] = coefficent;
         }
@@ -753,6 +780,182 @@ void Image::strechBands(StrechLevel level,bool useGlobalRange) {
     textureManager.setToAverage(false);
     deleteTexture();
     generateTexture({});
+}
+std::vector<std::shared_ptr<Texture>> Image::calcBasicDifference(const std::vector<Band>& inputBands,glm::vec2 bias){
+    const int width = bands[0].value->width, height = bands[0].value->height;
+    unsigned char* difference = new unsigned char[height * width* 3];
+    std::vector<int> tempDiff;
+    int minDIff = 1e9,maxDiff = 0;
+    if (!textureManager.useRGB){
+        tempDiff.assign(width * height, 0);
+        int bandIndex = textureManager.grayIndex;
+        for (int y = 0; y < height; y++)
+            for (int x = 0; x < width; x++){
+                int diff = NODATA;
+                if (bands[bandIndex].value->rawData[y][x] && inputBands[bandIndex].value->rawData[y][x] &&y + bias.y >= 0 && y + bias.y < height && x + bias.x >= 0 && x + bias.x < width){
+                    diff = abs(bands[bandIndex].value->average(y, x) - inputBands[bandIndex].value->average(y + bias.y, x + bias.x));
+                    if (diff > maxDiff) maxDiff = diff;
+                    if (diff < minDIff) minDIff = diff;
+                }
+                tempDiff[y * width + x] = diff;
+            }
+        for (int i = 0; i < width * height; i++){
+            if (tempDiff[i] == NODATA)
+                difference[i] = 0;
+            else{
+                unsigned char diff = static_cast<float>((tempDiff[i] - minDIff)) / (maxDiff - minDIff) * 255;
+                difference[i * 3 + 0] = diff;
+                difference[i * 3 + 1] = diff;
+                difference[i * 3 + 2] = diff;
+            }
+        }
+    }else{
+        tempDiff.assign(width * height * 3, 0);
+        for (int i = 0; i < textureManager.pointIndex; i++){
+            int bandIndex = textureManager.RGBindex[i];
+            for (int y = 0; y < height; y++)
+                for (int x = 0; x < width; x++){
+                    int diff = NODATA;
+                    if (bands[bandIndex].value->rawData[y][x] && inputBands[bandIndex].value->rawData[y][x] && y + bias.y >= 0 && y + bias.y < height && x + bias.x >= 0 && x + bias.x < width){
+                        diff = abs(bands[bandIndex].value->average(y, x) - inputBands[bandIndex].value->average(y + bias.y, x + bias.x));
+                        if (diff > maxDiff) maxDiff = diff;
+                        if (diff < minDIff) minDIff = diff;
+                    }
+                    int loc = (y * width + x) * 3 + i;
+                    tempDiff[loc] = diff;
+                }
+        }
+        for (int i = 0; i < width * height * 3; i++)
+            if (tempDiff[i] == NODATA)
+                difference[i] = 0;
+            else
+                difference[i] = static_cast<unsigned char>(static_cast<float>((tempDiff[i] - minDIff)) / (maxDiff - minDIff) * 255);
+    }
+    GLuint textureID;
+    glGenTextures(1, &textureID);
+    glBindTexture(GL_TEXTURE_2D, textureID);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, difference);
+    glGenerateMipmap(GL_TEXTURE_2D);
+    std::vector<glm::vec3> position = getVertices();
+    std::shared_ptr<Texture> texture = std::make_shared<Texture>(position,textureID,true);
+    glBindTexture(GL_TEXTURE_2D, 0);
+    delete [] difference;
+    return {texture};
+}
+std::vector<std::shared_ptr<Texture>> Image::calcPCADifference(const std::vector<Band>& inputBands, glm::vec2 bias){
+    return {};
+}
+std::vector<std::shared_ptr<Texture>> Image::calcMADDifference(const std::vector<Band>& inputBands, glm::vec2 bias){
+    MADSolver& solver = MADSolver::getSolver();
+    solver.bandNum = static_cast<int>(bands.size());
+    const int bandNum = solver.bandNum;
+    solver.detectNum = 2;
+    MatrixXd convXX(bandNum,bandNum),convYY(bandNum,bandNum),convXY(bandNum,bandNum);
+    for (int i = 0; i < bandNum; i++){
+        convXX(i,i) = 1; convYY(i,i) = 1;
+        convXY(i,i) = calcCorrelationCoefficent(bands[i].value, inputBands[i].value);
+        for (int j = i + 1; j < bandNum; j++){
+            double convxx = calcCorrelationCoefficent(bands[i].value, bands[j].value);
+            double convyy = calcCorrelationCoefficent(inputBands[i].value, inputBands[j].value);
+            double convxy = calcCorrelationCoefficent(bands[i].value, inputBands[j].value);
+            convXX(i,j) = convxx;   convXX(j,i) = convxx;
+            convYY(i,j) = convyy;   convYY(j,i) = convyy;
+            convXY(i,j) = convxy;   convXY(j,i) = convxy;
+        }
+    }
+    solver.calcInitMAD(convXX, convXY, convYY);
+    solver.showIndex = 0;
+    const int width = bands[0].value->width, height = bands[0].value->height;
+    std::vector<std::shared_ptr<Texture>> MADstack;
+    unsigned char* difference = new unsigned char[height * width];
+    solver.Z.clear();
+    solver.Z.assign(height, std::vector<double>(width,0.0));
+    for (int MADindex = 0; MADindex < solver.rho.size(); MADindex++){
+        std::vector<double> tempDiff(width * height,0);
+        int minDIff = 1e9,maxDiff = 0;
+        for (int bandIndex = 0; bandIndex < bandNum; bandIndex++){
+            double ** bandData1 = bands[bandIndex].value->normalizedData;
+            double ** bandData2 = inputBands[bandIndex].value->normalizedData;
+            for (int y = 0; y < height; y++)
+                for (int x = 0; x < width; x++){
+                    int diff = NODATA, loc = y * width + x;
+                    if (bandData1[y][x] != NODATA && bandData2[y][x] != NODATA && tempDiff[loc]!= NODATA && y + bias.y >= 0 && y + bias.y < height && x + bias.x >= 0 && x + bias.x < width){
+                        tempDiff[loc] += bandData1[y][x] * solver.A[MADindex](bandIndex) - bandData2[y][x] * solver.B[MADindex](bandIndex);
+                    }else
+                        tempDiff[loc] = diff;
+                }
+        }
+        const double rho = solver.rho[MADindex];
+        for (int y = 0; y < height; y++)
+            for (int x = 0; x < width; x++){
+                int loc = y * width + x;
+                double& diff = tempDiff[loc];
+                if (diff == NODATA){
+                    solver.Z[y][x] = NODATA;
+                    continue;
+                }
+                diff = abs(diff);
+                if (MADindex < solver.detectNum)
+                    solver.Z[y][x] += (diff / rho) * (diff / rho);
+                if (diff < minDIff)    minDIff = diff;
+                if (diff > maxDiff)    maxDiff = diff;
+            }
+        for (int i = 0; i < width * height; i++)
+            if (tempDiff[i] == NODATA)
+                difference[i] = 0;
+            else
+                difference[i] = static_cast<unsigned char>((tempDiff[i] - minDIff) / (maxDiff - minDIff) * 255);
+        GLuint textureID;
+        glGenTextures(1, &textureID);
+        glBindTexture(GL_TEXTURE_2D, textureID);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_R8, width, height, 0, GL_RED, GL_UNSIGNED_BYTE, difference);
+        glGenerateMipmap(GL_TEXTURE_2D);
+        std::vector<glm::vec3> position = getVertices();
+        std::shared_ptr<Texture> texture = std::make_shared<Texture>(position,textureID,false);
+        glBindTexture(GL_TEXTURE_2D, 0);
+        MADstack.push_back(texture);
+    }
+    solver.calcChangeSignal();
+    for (int y = 0; y < height; y++)
+        for (int x = 0; x < width; x++){
+            int loc = y * width + x;
+            if (solver.changed[y][x])
+                difference[loc] = 255;
+            else
+                difference[loc] = 0;
+        }
+    GLuint textureID;
+    glGenTextures(1, &textureID);
+    glBindTexture(GL_TEXTURE_2D, textureID);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_R8, width, height, 0, GL_RED, GL_UNSIGNED_BYTE, difference);
+    glGenerateMipmap(GL_TEXTURE_2D);
+    std::vector<glm::vec3> position = getVertices();
+    std::shared_ptr<Texture> texture = std::make_shared<Texture>(position,textureID,false);
+    glBindTexture(GL_TEXTURE_2D, 0);
+    MADstack.push_back(texture);
+    delete [] difference;
+    return MADstack;
+}
+std::vector<std::shared_ptr<Texture>> Image::calcDifference(const std::vector<Band>& inputBands,int methodID,glm::vec2 bias){
+    if (methodID == 0)
+        return calcBasicDifference(inputBands, bias);
+    else if (methodID == 1)
+        return calcPCADifference(inputBands, bias);
+    else if (methodID == 2)
+        return calcMADDifference(inputBands, bias);
+    return {};
 }
 void Image::exportImage(std::string filePath){
     if (textureManager.useRGB)
