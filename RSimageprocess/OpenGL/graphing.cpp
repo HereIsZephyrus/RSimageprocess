@@ -853,7 +853,6 @@ std::vector<std::shared_ptr<Texture>> Image::calcMADDifference(const std::vector
     MADSolver& solver = MADSolver::getSolver();
     solver.bandNum = static_cast<int>(bands.size());
     const int bandNum = solver.bandNum;
-    solver.detectNum = 2;
     MatrixXd convXX(bandNum,bandNum),convYY(bandNum,bandNum),convXY(bandNum,bandNum);
     for (int i = 0; i < bandNum; i++){
         convXX(i,i) = 1; convYY(i,i) = 1;
@@ -872,6 +871,7 @@ std::vector<std::shared_ptr<Texture>> Image::calcMADDifference(const std::vector
     const int width = bands[0].value->width, height = bands[0].value->height;
     std::vector<std::shared_ptr<Texture>> MADstack;
     unsigned char* difference = new unsigned char[height * width];
+    unsigned char* pseudocolor = new unsigned char[height * width * 3];
     solver.Z.clear();
     solver.Z.assign(height, std::vector<double>(width,0.0));
     for (int MADindex = 0; MADindex < solver.rho.size(); MADindex++){
@@ -889,7 +889,7 @@ std::vector<std::shared_ptr<Texture>> Image::calcMADDifference(const std::vector
                         tempDiff[loc] = diff;
                 }
         }
-        const double rho = solver.rho[MADindex];
+        const double rho = 2 * (1 - solver.rho[MADindex]);
         for (int y = 0; y < height; y++)
             for (int x = 0; x < width; x++){
                 int loc = y * width + x;
@@ -899,16 +899,22 @@ std::vector<std::shared_ptr<Texture>> Image::calcMADDifference(const std::vector
                     continue;
                 }
                 diff = abs(diff);
-                if (MADindex < solver.detectNum)
-                    solver.Z[y][x] += (diff / rho) * (diff / rho);
+                solver.Z[y][x] += (diff / rho) * (diff / rho);
                 if (diff < minDIff)    minDIff = diff;
                 if (diff > maxDiff)    maxDiff = diff;
             }
         for (int i = 0; i < width * height; i++)
-            if (tempDiff[i] == NODATA)
+            if (tempDiff[i] == NODATA){
                 difference[i] = 0;
-            else
-                difference[i] = static_cast<unsigned char>((tempDiff[i] - minDIff) / (maxDiff - minDIff) * 255);
+                if (MADindex < 3)
+                    pseudocolor[i * 3 + MADindex] = 0;
+            }
+            else{
+                unsigned char diff = static_cast<unsigned char>((tempDiff[i] - minDIff) / (maxDiff - minDIff) * 255);
+                difference[i] = diff;
+                if (MADindex < 3)
+                    pseudocolor[i * 3 + MADindex] = diff;
+            }
         GLuint textureID;
         glGenTextures(1, &textureID);
         glBindTexture(GL_TEXTURE_2D, textureID);
@@ -932,20 +938,35 @@ std::vector<std::shared_ptr<Texture>> Image::calcMADDifference(const std::vector
             else
                 difference[loc] = 0;
         }
-    GLuint textureID;
-    glGenTextures(1, &textureID);
-    glBindTexture(GL_TEXTURE_2D, textureID);
+    GLuint pseudoTextureID;
+    glGenTextures(1, &pseudoTextureID);
+    glBindTexture(GL_TEXTURE_2D, pseudoTextureID);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, pseudocolor);
+    glGenerateMipmap(GL_TEXTURE_2D);
+    std::vector<glm::vec3> position = getVertices();
+    std::shared_ptr<Texture> texture = std::make_shared<Texture>(position,pseudoTextureID,true);
+    MADstack.push_back(texture);
+    glBindTexture(GL_TEXTURE_2D, 0);
+    
+    GLuint featureTextureID;
+    glGenTextures(1, &featureTextureID);
+    glBindTexture(GL_TEXTURE_2D, featureTextureID);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_R8, width, height, 0, GL_RED, GL_UNSIGNED_BYTE, difference);
     glGenerateMipmap(GL_TEXTURE_2D);
-    std::vector<glm::vec3> position = getVertices();
-    std::shared_ptr<Texture> texture = std::make_shared<Texture>(position,textureID,false);
+    texture = std::make_shared<Texture>(position,featureTextureID,false);
     glBindTexture(GL_TEXTURE_2D, 0);
+    
     MADstack.push_back(texture);
     delete [] difference;
+    delete [] pseudocolor;
     return MADstack;
 }
 std::vector<std::shared_ptr<Texture>> Image::calcDifference(const std::vector<Band>& inputBands,int methodID,glm::vec2 bias){

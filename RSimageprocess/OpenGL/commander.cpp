@@ -620,11 +620,11 @@ void LayerManager::printLayerTree(){
     }
 }
 void LayerManager::draw(){
-    pLayer current = tail;
+    pLayer current = head;
     while (current != nullptr){
         if (current->getLayerVisble())
             current->draw();
-        current = current->prev;
+        current = current->next;
     }
 }
 std::shared_ptr<Layer> LayerManager::renderRestLayers(){
