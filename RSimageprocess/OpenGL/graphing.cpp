@@ -101,9 +101,9 @@ void Spectum::calcNormalize(){
         }
     normalMean /= totalPixel;
 }
-Spectum::Spectum(unsigned short* flatd,int w,int h):width(w),height(h),normalizedData(nullptr){\
-    if (width % 2) width--;
-    if (height%2)height--;
+Spectum::Spectum(unsigned short* flatd,int w,int h):width(w),height(h),normalizedData(nullptr){
+    width -= (width % 4);
+    height -= (height % 4);
     rawData = new unsigned short*[height];
     std::array<int, SPECT_VALUE_RANGE> counting;
     counting = {0};
@@ -136,9 +136,9 @@ Spectum::Spectum(unsigned short* flatd,int w,int h):width(w),height(h),normalize
     strechRange.first = 0; strechRange.second = SPECT_VALUE_RANGE - 1;\
 }
 Spectum::Spectum(const cv::Mat& image):normalizedData(nullptr){
-    width = image.cols; height = image.rows;\
-    if (width % 2) width--;
-    if (height%2)height--;
+    width = image.cols; height = image.rows;
+    width -= (width % 4);
+    height -= (height % 4);
     rawData = new unsigned short*[height];
     std::array<int, SPECT_VALUE_RANGE> counting;
     counting = {0};
