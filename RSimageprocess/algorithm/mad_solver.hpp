@@ -20,10 +20,10 @@ public:
     void operator = (const MADSolver) = delete;
     int bandNum;
     std::vector<double> rho;
-    std::vector<VectorXd> leftSingularVector;
-    std::vector<VectorXd> rightSingularVector;
+    std::vector<VectorXd> A,B;
+    void calcInitMAD(const MatrixXd& convXX,const MatrixXd& convXY,const MatrixXd& convYY);
 private:
-    
+    MatrixXd calcMatrixPowerNegHalf(const MatrixXd& conv);
     MADSolver(){}
 };
 #endif /* mad_solver_hpp */

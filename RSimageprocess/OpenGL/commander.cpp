@@ -613,13 +613,3 @@ void LayerManager::draw(){
         current = current->prev;
     }
 }
-MatrixXd calcMatrixPowerNegHalf(const MatrixXd& conv) {
-    SelfAdjointEigenSolver<MatrixXd> eigenSolver(conv);
-    if (eigenSolver.info() != Success)
-        throw std::runtime_error("Eigenvalue decomposition failed.");
-    VectorXd eigenValues = eigenSolver.eigenvalues();
-    MatrixXd eigenVectors = eigenSolver.eigenvectors();
-    VectorXd eigenValuesInverseSqrt = eigenValues.array().sqrt().inverse();
-    MatrixXd D = eigenValuesInverseSqrt.asDiagonal();
-    return eigenVectors * D * eigenVectors.transpose();
-}

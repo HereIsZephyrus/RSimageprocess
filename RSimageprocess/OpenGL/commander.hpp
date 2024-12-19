@@ -129,5 +129,4 @@ private:
 };
 void scrollCallback(GLFWwindow* window, double xoffset, double yoffset);
 void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods);
-MatrixXd calcMatrixPowerNegHalf(const MatrixXd& A);
 #endif /* commander_hpp */

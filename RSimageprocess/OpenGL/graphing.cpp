@@ -5,6 +5,7 @@
 //  Created by ChanningTong on 10/22/24.
 //
 
+#define NODATA -999
 #include <fstream>
 #include <sstream>
 #include <iostream>
@@ -93,7 +94,7 @@ void Spectum::calcNormalize(){
     for (int y = 0; y < height; y++)
         for (int x = 0; x < width; x++){
             if (rawData[y][x] == 0)
-                normalizedData[y][x] = -999;
+                normalizedData[y][x] = NODATA;
             else{
                 normalizedData[y][x] = (average(y, x) - normalMean) / stdv;
                 normalMean += normalizedData[y][x];
@@ -648,7 +649,7 @@ double Image::calcCorrelationCoefficent(std::shared_ptr<Spectum> band1,std::shar
     double covariance = 0.0;
     for (int y = 0; y < height; y++)
         for (int x = 0; x < width; x++){
-            if (banddata1[y][x] == -999 || banddata2[y][x] == -999)
+            if (banddata1[y][x] == NODATA || banddata2[y][x] == NODATA)
                 continue;
             covariance += (banddata1[y][x] - mean1) * (banddata2[y][x] - mean2);
             ++totalPixel;
@@ -786,7 +787,7 @@ void Image::calcBasicDifference(const std::vector<Band>& inputBands, unsigned ch
         int bandIndex = textureManager.grayIndex;
         for (int y = 0; y < height; y++)
             for (int x = 0; x < width; x++){
-                int diff = -999;
+                int diff = NODATA;
                 if (bands[bandIndex].value->rawData[y][x] && inputBands[bandIndex].value->rawData[y][x] &&y + bias.y >= 0 && y + bias.y < height && x + bias.x >= 0 && x + bias.x < width){
                     diff = abs(bands[bandIndex].value->average(y, x) - inputBands[bandIndex].value->average(y + bias.y, x + bias.x));
                     if (diff > maxDiff) maxDiff = diff;
@@ -795,7 +796,7 @@ void Image::calcBasicDifference(const std::vector<Band>& inputBands, unsigned ch
                 tempDiff[y * width + x] = diff;
             }
         for (int i = 0; i < width * height; i++){
-            if (tempDiff[i] == -999)
+            if (tempDiff[i] == NODATA)
                 difference[i] = 0;
             else{
                 unsigned char diff = static_cast<float>((tempDiff[i] - minDIff)) / (maxDiff - minDIff) * 255;
@@ -811,7 +812,7 @@ void Image::calcBasicDifference(const std::vector<Band>& inputBands, unsigned ch
         int bandIndex = textureManager.RGBindex[i];
         for (int y = 0; y < height; y++)
             for (int x = 0; x < width; x++){
-                int diff = -999;
+                int diff = NODATA;
                 if (bands[bandIndex].value->rawData[y][x] && inputBands[bandIndex].value->rawData[y][x] && y + bias.y >= 0 && y + bias.y < height && x + bias.x >= 0 && x + bias.x < width){
                     diff = abs(bands[bandIndex].value->average(y, x) - inputBands[bandIndex].value->average(y + bias.y, x + bias.x));
                     if (diff > maxDiff) maxDiff = diff;
@@ -822,7 +823,7 @@ void Image::calcBasicDifference(const std::vector<Band>& inputBands, unsigned ch
             }
     }
     for (int i = 0; i < width * height * 3; i++)
-        if (tempDiff[i] == -999)
+        if (tempDiff[i] == NODATA)
             difference[i] = 0;
         else
             difference[i] = static_cast<unsigned char>(static_cast<float>((tempDiff[i] - minDIff)) / (maxDiff - minDIff) * 255);
@@ -846,28 +847,41 @@ void Image::calcMADDifference(const std::vector<Band>& inputBands, unsigned char
             convXY(i,j) = convxy;   convXY(j,i) = convxy;
         }
     }
-    MatrixXd revConvXX = calcMatrixPowerNegHalf(convXX),revConvYY = calcMatrixPowerNegHalf(convYY);
-    MatrixXd M = revConvXX * convXY * revConvYY;
-    JacobiSVD<MatrixXd> svd(M, ComputeThinU | ComputeThinV);
-    VectorXd singularValues = svd.singularValues();
-    MatrixXd U = svd.matrixU();
-    MatrixXd V = svd.matrixV();
-    std::vector<int> indices(singularValues.size());
-    for (int i = 0; i < singularValues.size(); ++i)
-        indices[i] = i;
-    std::sort(indices.begin(), indices.end(),
-              [&singularValues](int i1, int i2) {
-                  return singularValues(i1) > singularValues(i2);
-              });
-    //MatrixXd testMatrix = convYY.inverse() * convXY;
-    for (int i = 0; i < singularValues.size(); ++i) {
-        solver.rho.push_back(singularValues(indices[i]));
-        VectorXd a = revConvXX * U.col(indices[i]), b = revConvYY * V.col(indices[i]);
-        solver.leftSingularVector.push_back(a);
-        solver.rightSingularVector.push_back(b);
-        //std::cout<<"<a>:"<<(testMatrix * a /singularValues(indices[i])).transpose() <<std::endl;
-        //std::cout<<"<b>:"<<b.transpose()<<std::endl;
+    solver.calcInitMAD(convXX, convXY, convYY);
+    const int width = bands[0].value->width, height = bands[0].value->height;
+    std::vector<double> tempDiff(width * height,0);
+    int minDIff = 1e9,maxDiff = 0;
+    for (int bandIndex = 0; bandIndex < bandNum; bandIndex++){
+        double ** bandData1 = bands[bandIndex].value->normalizedData;
+        double ** bandData2 = inputBands[bandIndex].value->normalizedData;
+        for (int y = 0; y < height; y++)
+            for (int x = 0; x < width; x++){
+                int diff = NODATA, loc = y * width + x;
+                if (bandData1[y][x] != NODATA && bandData2[y][x] != NODATA && tempDiff[loc]!= NODATA && y + bias.y >= 0 && y + bias.y < height && x + bias.x >= 0 && x + bias.x < width){
+                    tempDiff[loc] += bandData1[y][x] * solver.A[0](bandIndex) - bandData2[y][x] * solver.B[0](bandIndex);
+                }else
+                    tempDiff[loc] = diff;
+            }
     }
+    for (std::vector<double>::iterator diff = tempDiff.begin(); diff != tempDiff.end(); diff++){
+        if (*diff == NODATA)
+            continue;
+        *diff = abs(*diff);
+        if (*diff < minDIff)    minDIff = *diff;
+        if (*diff > maxDiff)    maxDiff = *diff;
+    }
+    for (int i = 0; i < width * height; i++)
+        if (tempDiff[i] == NODATA){
+            difference[i * 3 + 0] = 0;
+            difference[i * 3 + 1] = 0;
+            difference[i * 3 + 2] = 0;
+        }
+        else{
+            unsigned char diff = static_cast<unsigned char>((tempDiff[i] - minDIff) / (maxDiff - minDIff) * 255);
+            difference[i * 3 + 0] = diff;
+            difference[i * 3 + 1] = diff;
+            difference[i * 3 + 2] = diff;
+        }
 }
 void Image::calcDifference(const std::vector<Band>& inputBands, unsigned char* difference,int methodID,glm::vec2 bias){
     if (methodID == 0)
