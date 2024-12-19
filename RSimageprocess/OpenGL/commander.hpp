@@ -71,6 +71,7 @@ public:
     void toggleDiffVisble() {diffVisible = !diffVisible;}
     bool hasROI() const {return vector != nullptr;}
     bool hasClassified() const {return classifier != nullptr;}
+    bool hasDiff() const {return !diffTexture.empty();}
     void showStatistic() const;
     void showPrecision() const;
     void exportImage() const{

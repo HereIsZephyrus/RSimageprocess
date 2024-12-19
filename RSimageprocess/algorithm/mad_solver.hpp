@@ -11,6 +11,7 @@
 #include <Eigen/Dense>
 using namespace Eigen;
 class MADSolver{
+    using dataMat = std::vector<std::vector<double>>;
 public:
     static MADSolver& getSolver(){
         static MADSolver instance;
@@ -21,6 +22,7 @@ public:
     int bandNum;
     std::vector<double> rho;
     std::vector<VectorXd> A,B;
+    std::vector<dataMat> dataVec;
     int showIndex;
     void calcInitMAD(const MatrixXd& convXX,const MatrixXd& convXY,const MatrixXd& convYY);
     void decreaseIndex(){if (showIndex > 0)  --showIndex;}

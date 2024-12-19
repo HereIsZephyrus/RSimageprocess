@@ -218,16 +218,24 @@ void RenderWorkspace(){
         if (ImGui::Button("监督分类",ButtonSize)){
             toShowSupervised = true;
         }
-        visbleButtonStr = "隐藏特征";
-        if (!buffer.selectedLayer->getFeatureVisble())
-            visbleButtonStr = "显示特征";
-        if (buffer.selectedLayer->hasClassified())
+        if (buffer.selectedLayer->hasClassified()){
+            visbleButtonStr = "隐藏特征";
+            if (!buffer.selectedLayer->getFeatureVisble())
+                visbleButtonStr = "显示特征";
             if (ImGui::Button(visbleButtonStr.c_str(),ButtonSize))
                 buffer.selectedLayer->toggleFeatureVisble();
+        }
         ImGui::SameLine();
         if (buffer.selectedLayer->hasClassified())
             if (ImGui::Button("显示精度",ButtonSize))
                 toShowPrecision = true;
+        if (buffer.selectedLayer->hasDiff()){
+            visbleButtonStr = "隐藏差图";
+            if (!buffer.selectedLayer->getDiffVisble())
+                visbleButtonStr = "显示差图";
+            if (ImGui::Button(visbleButtonStr.c_str(),ButtonSize))
+                buffer.selectedLayer->toggleDiffVisble();
+        }
     }
     style.FramePadding = ImVec2(4.0f, 2.0f);
     style.ItemSpacing = ImVec2(8.0f, 4.0f);
@@ -350,7 +358,7 @@ void drawSelectPanel(){
     std::string windowStr = "current MAD : " + std::to_string(solver.showIndex);
     ImGui::Begin(windowStr.c_str(),nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse);
     ImGui::SetWindowPos(ImVec2(ImGui::GetIO().DisplaySize.x / 2 - 100, 10));
-    ImGui::SetWindowSize(ImVec2(150, 50));
+    ImGui::SetWindowSize(ImVec2(200, 80));
     if (ImGui::ArrowButton("##decrease MAD select index", ImGuiDir_Left))
         solver.decreaseIndex();
     ImGui::SameLine();

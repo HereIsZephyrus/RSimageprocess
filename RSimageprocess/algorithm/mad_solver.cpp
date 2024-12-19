@@ -24,6 +24,7 @@ void MADSolver::calcInitMAD(const MatrixXd& convXX,const MatrixXd& convXY,const 
     //MatrixXd testMatrix = convYY.inverse() * convXY;
     rho.clear();
     A.clear();  B.clear();
+    dataVec.clear();
     for (int i = 0; i < singularValues.size(); ++i) {
         rho.push_back(singularValues(indices[i]));
         VectorXd a = revConvXX * U.col(indices[i]), b = revConvYY * V.col(indices[i]);
