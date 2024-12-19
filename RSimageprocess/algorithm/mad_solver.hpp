@@ -19,9 +19,9 @@ public:
     MADSolver(const MADSolver&) = delete;
     void operator = (const MADSolver) = delete;
     int bandNum;
-    double maxSingularValue;
-    VectorXd leftSingularVector;
-    VectorXd rightSingularVector;
+    std::vector<double> rho;
+    std::vector<VectorXd> leftSingularVector;
+    std::vector<VectorXd> rightSingularVector;
 private:
     
     MADSolver(){}

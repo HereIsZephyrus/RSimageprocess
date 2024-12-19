@@ -237,7 +237,9 @@ Spectum::~Spectum(){
     for (size_t h = 0; h < height; h++)
         delete[] rawData[h];
     delete[] rawData;
-    //delete[] showData;
+    for (size_t h = 0; h < height; h++)
+        delete[] normalizedData[h];
+    delete[] normalizedData;
 }
 void Primitive::initResource(GLenum shp,Shader* inputshader){
     transMat = glm::mat4(1.0f);
@@ -845,12 +847,27 @@ void Image::calcMADDifference(const std::vector<Band>& inputBands, unsigned char
         }
     }
     MatrixXd revConvXX = calcMatrixPowerNegHalf(convXX),revConvYY = calcMatrixPowerNegHalf(convYY);
-    //std::cout<<"revConvXX"<<std::endl<<revConvXX<<"revConvYY"<<std::endl<<revConvYY<<std::endl;
     MatrixXd M = revConvXX * convXY * revConvYY;
     JacobiSVD<MatrixXd> svd(M, ComputeThinU | ComputeThinV);
-    solver.maxSingularValue = svd.singularValues()(0);
-    solver.leftSingularVector = svd.matrixU().col(0);
-    solver.rightSingularVector = svd.matrixV().col(0);
+    VectorXd singularValues = svd.singularValues();
+    MatrixXd U = svd.matrixU();
+    MatrixXd V = svd.matrixV();
+    std::vector<int> indices(singularValues.size());
+    for (int i = 0; i < singularValues.size(); ++i)
+        indices[i] = i;
+    std::sort(indices.begin(), indices.end(),
+              [&singularValues](int i1, int i2) {
+                  return singularValues(i1) > singularValues(i2);
+              });
+    //MatrixXd testMatrix = convYY.inverse() * convXY;
+    for (int i = 0; i < singularValues.size(); ++i) {
+        solver.rho.push_back(singularValues(indices[i]));
+        VectorXd a = revConvXX * U.col(indices[i]), b = revConvYY * V.col(indices[i]);
+        solver.leftSingularVector.push_back(a);
+        solver.rightSingularVector.push_back(b);
+        //std::cout<<"<a>:"<<(testMatrix * a /singularValues(indices[i])).transpose() <<std::endl;
+        //std::cout<<"<b>:"<<b.transpose()<<std::endl;
+    }
 }
 void Image::calcDifference(const std::vector<Band>& inputBands, unsigned char* difference,int methodID,glm::vec2 bias){
     if (methodID == 0)
