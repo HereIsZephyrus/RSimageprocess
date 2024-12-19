@@ -7,7 +7,7 @@
 
 #ifndef graphing_hpp
 #define graphing_hpp
-
+#define NODATA -999
 #define GLEW_STATIC
 #define SPECT_VALUE_RANGE 65536
 #include <gdal.h>

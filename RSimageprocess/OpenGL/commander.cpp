@@ -437,6 +437,8 @@ void Layer::calcDifference(std::shared_ptr<BundleParser> parser){
     bias.x /= pixelSize; bias.y /= pixelSize;
     if (!diffTexture.empty())  diffTexture.clear();
     diffTexture = raster->calcDifference(inputImage.getBands(),2,bias);
+    featureTexture = diffTexture.back();
+    diffTexture.pop_back();
 }
 std::shared_ptr<Texture> Layer::generateClassifiedTexture(unsigned char *classified){
     const int width = raster->getBands()[0].value->width, height = raster->getBands()[0].value->height;

@@ -5,7 +5,6 @@
 //  Created by ChanningTong on 10/22/24.
 //
 
-#define NODATA -999
 #include <fstream>
 #include <sstream>
 #include <iostream>
@@ -849,7 +848,6 @@ std::vector<std::shared_ptr<Texture>> Image::calcPCADifference(const std::vector
 std::vector<std::shared_ptr<Texture>> Image::calcMADDifference(const std::vector<Band>& inputBands, glm::vec2 bias){
     MADSolver& solver = MADSolver::getSolver();
     solver.bandNum = static_cast<int>(bands.size());
-    solver.dataVec.assign(solver.bandNum, std::vector<std::vector<double>>());
     const int bandNum = solver.bandNum;
     MatrixXd convXX(bandNum,bandNum),convYY(bandNum,bandNum),convXY(bandNum,bandNum);
     for (int i = 0; i < bandNum; i++){
@@ -869,38 +867,42 @@ std::vector<std::shared_ptr<Texture>> Image::calcMADDifference(const std::vector
     const int width = bands[0].value->width, height = bands[0].value->height;
     std::vector<std::shared_ptr<Texture>> MADstack;
     unsigned char* difference = new unsigned char[height * width];
+    solver.Z.clear();
+    solver.Z.assign(height, std::vector<double>(width,0.0));
     for (int MADindex = 0; MADindex < solver.rho.size(); MADindex++){
-        solver.dataVec[MADindex].assign(height, std::vector<double>(width,0.0));
-        std::vector<std::vector<double>>& tempDiff = solver.dataVec[MADindex];
+        std::vector<double> tempDiff(width * height,0);
         int minDIff = 1e9,maxDiff = 0;
         for (int bandIndex = 0; bandIndex < bandNum; bandIndex++){
             double ** bandData1 = bands[bandIndex].value->normalizedData;
             double ** bandData2 = inputBands[bandIndex].value->normalizedData;
             for (int y = 0; y < height; y++)
                 for (int x = 0; x < width; x++){
-                    int diff = NODATA;
-                    if (tempDiff[y][x]!= NODATA && bandData1[y][x] != NODATA && bandData2[y][x] != NODATA &&  y + bias.y >= 0 && y + bias.y < height && x + bias.x >= 0 && x + bias.x < width){
-                        tempDiff[y][x] += bandData1[y][x] * solver.A[MADindex](bandIndex) - bandData2[y][x] * solver.B[MADindex](bandIndex);
+                    int diff = NODATA, loc = y * width + x;
+                    if (bandData1[y][x] != NODATA && bandData2[y][x] != NODATA && tempDiff[loc]!= NODATA && y + bias.y >= 0 && y + bias.y < height && x + bias.x >= 0 && x + bias.x < width){
+                        tempDiff[loc] += bandData1[y][x] * solver.A[MADindex](bandIndex) - bandData2[y][x] * solver.B[MADindex](bandIndex);
                     }else
-                        tempDiff[y][x] = diff;
+                        tempDiff[loc] = diff;
                 }
         }
+        const double rho = solver.rho[MADindex];
         for (int y = 0; y < height; y++)
             for (int x = 0; x < width; x++){
-                if (tempDiff[y][x] == NODATA)
+                int loc = y * width + x;
+                double& diff = tempDiff[loc];
+                if (diff == NODATA){
+                    solver.Z[y][x] = NODATA;
                     continue;
-                if (tempDiff[y][x] < 0)
-                    std::cout<<"thers is value less then zero!"<<std::endl;
-                //tempDiff[y][x] = abs(tempDiff[y][x]);
-                if (tempDiff[y][x] < minDIff)    minDIff = tempDiff[y][x];
-                if (tempDiff[y][x] > maxDiff)   maxDiff = tempDiff[y][x];
-        }
-        for (int y = 0; y < height; y++)
-            for (int x = 0; x < width; x++)
-                if (tempDiff[y][x] == NODATA)
-                    difference[y * width + x] = 0;
-                else
-                    difference[y * width + x] = static_cast<unsigned char>((tempDiff[y][x] - minDIff) / (maxDiff - minDIff) * 255);
+                }
+                diff = abs(diff);
+                solver.Z[y][x] += (diff / rho) * (diff / rho);
+                if (diff < minDIff)    minDIff = diff;
+                if (diff > maxDiff)    maxDiff = diff;
+            }
+        for (int i = 0; i < width * height; i++)
+            if (tempDiff[i] == NODATA)
+                difference[i ] = 0;
+            else
+                difference[i] = static_cast<unsigned char>((tempDiff[i] - minDIff) / (maxDiff - minDIff) * 255);
         GLuint textureID;
         glGenTextures(1, &textureID);
         glBindTexture(GL_TEXTURE_2D, textureID);
@@ -915,6 +917,25 @@ std::vector<std::shared_ptr<Texture>> Image::calcMADDifference(const std::vector
         glBindTexture(GL_TEXTURE_2D, 0);
         MADstack.push_back(texture);
     }
+    solver.calcChangeSignal();
+    for (int y = 0; y < height; y++)
+        for (int x = 0; x < width; x++){
+            int loc = y * width + x;
+            difference[loc] = solver.changed[y][x];
+        }
+    GLuint textureID;
+    glGenTextures(1, &textureID);
+    glBindTexture(GL_TEXTURE_2D, textureID);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_R8, width, height, 0, GL_RED, GL_UNSIGNED_BYTE, difference);
+    glGenerateMipmap(GL_TEXTURE_2D);
+    std::vector<glm::vec3> position = getVertices();
+    std::shared_ptr<Texture> texture = std::make_shared<Texture>(position,textureID,false);
+    glBindTexture(GL_TEXTURE_2D, 0);
+    MADstack.push_back(texture);
     delete [] difference;
     return MADstack;
 }

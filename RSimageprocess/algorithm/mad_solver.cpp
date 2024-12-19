@@ -24,7 +24,6 @@ void MADSolver::calcInitMAD(const MatrixXd& convXX,const MatrixXd& convXY,const 
     //MatrixXd testMatrix = convYY.inverse() * convXY;
     rho.clear();
     A.clear();  B.clear();
-    dataVec.clear();
     for (int i = 0; i < singularValues.size(); ++i) {
         rho.push_back(singularValues(indices[i]));
         VectorXd a = revConvXX * U.col(indices[i]), b = revConvYY * V.col(indices[i]);
@@ -43,4 +42,17 @@ MatrixXd MADSolver::calcMatrixPowerNegHalf(const MatrixXd& conv) {
     VectorXd eigenValuesInverseSqrt = eigenValues.array().sqrt().inverse();
     MatrixXd D = eigenValuesInverseSqrt.asDiagonal();
     return eigenVectors * D * eigenVectors.transpose();
+}
+void MADSolver::calcChangeSignal(){
+    const double chi2Statistic = ChiSquareProb[bandNum][2]; //p = 0.05
+    const int height = static_cast<int>(Z.size()),width = static_cast<int>(Z[0].size());
+    changed.clear();
+    changed.assign(height, std::vector<bool>(width,0));
+    for (int y = 0; y < height; y++)
+        for (int x = 0; x < width; x++){
+            if (Z[y][x] == NODATA)
+                changed[y][x] = 0;
+            else
+                changed[y][x] = (Z[y][x] > chi2Statistic);
+        }
 }
