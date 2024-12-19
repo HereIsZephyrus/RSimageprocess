@@ -68,5 +68,6 @@ void UnsupervisedClassify();
 void SupervisedClassify();
 void showPrecision();
 void calcDifference();
+void drawSelectPanel();
 }
 #endif /* window_hpp */

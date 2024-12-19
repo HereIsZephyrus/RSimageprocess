@@ -14,6 +14,7 @@
 #include "window.hpp"
 #include "graphing.hpp"
 #include "commander.hpp"
+#include "../algorithm/mad_solver.hpp"
 
 void WindowParas::InitParas(){
     glfwGetWindowContentScale(window, &xScale, &yScale);
@@ -142,6 +143,7 @@ bool DrawPopup(){
     }
     if (toCalcDifference){
         calcDifference();
+        return true;
     }
     return false;
 }
@@ -342,5 +344,18 @@ void calcDifference(){
         ImGui::EndPopup();
     }
     ImGui::PopFont();
+}
+void drawSelectPanel(){
+    MADSolver& solver = MADSolver::getSolver();
+    std::string windowStr = "current MAD : " + std::to_string(solver.showIndex);
+    ImGui::Begin(windowStr.c_str(),nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse);
+    ImGui::SetWindowPos(ImVec2(ImGui::GetIO().DisplaySize.x / 2 - 100, 10));
+    ImGui::SetWindowSize(ImVec2(150, 50));
+    if (ImGui::ArrowButton("##decrease MAD select index", ImGuiDir_Left))
+        solver.decreaseIndex();
+    ImGui::SameLine();
+    if (ImGui::ArrowButton("##increase Mad Select index", ImGuiDir_Right))
+        solver.increaseIndex();
+    ImGui::End();
 }
 }

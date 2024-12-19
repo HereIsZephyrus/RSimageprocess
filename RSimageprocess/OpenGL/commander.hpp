@@ -39,20 +39,21 @@ class Layer{
     std::shared_ptr<BundleParser> parserRaster;
     std::shared_ptr<ROIparser> parserVector;
     std::shared_ptr<Texture> featureTexture;
+    std::vector<std::shared_ptr<Texture>> diffTexture;
     std::shared_ptr<Classifier> classifier;
     std::string name;
-    bool layerVisble,roiVisible,featureVisible;
+    bool layerVisble,roiVisible,featureVisible,diffVisible;
     std::vector<Sample> dataset;
     std::string getFileName(std::string resourcePath);
     std::string getIndicator(int index){return raster->getIndicator(index);}
     void TrainROI();
-    void generateClassifiedTexture(unsigned char* classified);
+    std::shared_ptr<Texture> generateClassifiedTexture(unsigned char* classified);
 public:
     friend LayerManager;
     Layer(std::string layerName,std::string resourcePath):
-    name(layerName),prev(nullptr),next(nullptr),layerVisble(true),roiVisible(true),featureVisible(true),raster(nullptr),vector(nullptr),parserRaster(nullptr),parserVector(nullptr),featureTexture(nullptr),classifier(nullptr){}
+    name(layerName),prev(nullptr),next(nullptr),layerVisble(true),roiVisible(true),featureVisible(true),diffVisible(true),raster(nullptr),vector(nullptr),parserRaster(nullptr),parserVector(nullptr),featureTexture(nullptr),classifier(nullptr){}
     Layer(std::string layerName, const std::vector<Vertex>& vertices):
-    name(layerName),prev(nullptr),next(nullptr),layerVisble(true),roiVisible(true),featureVisible(true),vector(nullptr),parserRaster(nullptr),parserVector(nullptr),featureTexture(nullptr),classifier(nullptr){
+    name(layerName),prev(nullptr),next(nullptr),layerVisble(true),roiVisible(true),featureVisible(true),diffVisible(true),vector(nullptr),parserRaster(nullptr),parserVector(nullptr),featureTexture(nullptr),classifier(nullptr){
         raster = std::make_unique<Image>(vertices);
     }
     void draw();
@@ -66,6 +67,8 @@ public:
     void toggleROIVisble() {roiVisible = !roiVisible;}
     bool getFeatureVisble() const {return featureVisible;}
     void toggleFeatureVisble() {featureVisible = !featureVisible;}
+    bool getDiffVisble() const {return diffVisible;}
+    void toggleDiffVisble() {diffVisible = !diffVisible;}
     bool hasROI() const {return vector != nullptr;}
     bool hasClassified() const {return classifier != nullptr;}
     void showStatistic() const;

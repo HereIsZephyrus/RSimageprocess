@@ -778,8 +778,9 @@ void Image::strechBands(StrechLevel level,bool useGlobalRange) {
     deleteTexture();
     generateTexture({});
 }
-void Image::calcBasicDifference(const std::vector<Band>& inputBands, unsigned char* difference,glm::vec2 bias){
+std::vector<std::shared_ptr<Texture>> Image::calcBasicDifference(const std::vector<Band>& inputBands,glm::vec2 bias){
     const int width = bands[0].value->width, height = bands[0].value->height;
+    unsigned char* difference = new unsigned char[height * width* 3];
     std::vector<int> tempDiff;
     int minDIff = 1e9,maxDiff = 0;
     if (!textureManager.useRGB){
@@ -805,35 +806,50 @@ void Image::calcBasicDifference(const std::vector<Band>& inputBands, unsigned ch
                 difference[i * 3 + 2] = diff;
             }
         }
-        return;
-    }
-    tempDiff.assign(width * height * 3, 0);
-    for (int i = 0; i < textureManager.pointIndex; i++){
-        int bandIndex = textureManager.RGBindex[i];
-        for (int y = 0; y < height; y++)
-            for (int x = 0; x < width; x++){
-                int diff = NODATA;
-                if (bands[bandIndex].value->rawData[y][x] && inputBands[bandIndex].value->rawData[y][x] && y + bias.y >= 0 && y + bias.y < height && x + bias.x >= 0 && x + bias.x < width){
-                    diff = abs(bands[bandIndex].value->average(y, x) - inputBands[bandIndex].value->average(y + bias.y, x + bias.x));
-                    if (diff > maxDiff) maxDiff = diff;
-                    if (diff < minDIff) minDIff = diff;
+    }else{
+        tempDiff.assign(width * height * 3, 0);
+        for (int i = 0; i < textureManager.pointIndex; i++){
+            int bandIndex = textureManager.RGBindex[i];
+            for (int y = 0; y < height; y++)
+                for (int x = 0; x < width; x++){
+                    int diff = NODATA;
+                    if (bands[bandIndex].value->rawData[y][x] && inputBands[bandIndex].value->rawData[y][x] && y + bias.y >= 0 && y + bias.y < height && x + bias.x >= 0 && x + bias.x < width){
+                        diff = abs(bands[bandIndex].value->average(y, x) - inputBands[bandIndex].value->average(y + bias.y, x + bias.x));
+                        if (diff > maxDiff) maxDiff = diff;
+                        if (diff < minDIff) minDIff = diff;
+                    }
+                    int loc = (y * width + x) * 3 + i;
+                    tempDiff[loc] = diff;
                 }
-                int loc = (y * width + x) * 3 + i;
-                tempDiff[loc] = diff;
-            }
+        }
+        for (int i = 0; i < width * height * 3; i++)
+            if (tempDiff[i] == NODATA)
+                difference[i] = 0;
+            else
+                difference[i] = static_cast<unsigned char>(static_cast<float>((tempDiff[i] - minDIff)) / (maxDiff - minDIff) * 255);
     }
-    for (int i = 0; i < width * height * 3; i++)
-        if (tempDiff[i] == NODATA)
-            difference[i] = 0;
-        else
-            difference[i] = static_cast<unsigned char>(static_cast<float>((tempDiff[i] - minDIff)) / (maxDiff - minDIff) * 255);
+    GLuint textureID;
+    glGenTextures(1, &textureID);
+    glBindTexture(GL_TEXTURE_2D, textureID);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, difference);
+    glGenerateMipmap(GL_TEXTURE_2D);
+    std::vector<glm::vec3> position = getVertices();
+    std::shared_ptr<Texture> texture = std::make_shared<Texture>(position,textureID,true);
+    glBindTexture(GL_TEXTURE_2D, 0);
+    delete [] difference;
+    return {texture};
 }
-void Image::calcPCADifference(const std::vector<Band>& inputBands, unsigned char* difference,glm::vec2 bias){
-    
+std::vector<std::shared_ptr<Texture>> Image::calcPCADifference(const std::vector<Band>& inputBands, glm::vec2 bias){
+    return {};
 }
-void Image::calcMADDifference(const std::vector<Band>& inputBands, unsigned char* difference,glm::vec2 bias){
+std::vector<std::shared_ptr<Texture>> Image::calcMADDifference(const std::vector<Band>& inputBands, glm::vec2 bias){
     MADSolver& solver = MADSolver::getSolver();
-    int bandNum = static_cast<int>(bands.size());
+    solver.bandNum = static_cast<int>(bands.size());
+    const int bandNum = solver.bandNum;
     MatrixXd convXX(bandNum,bandNum),convYY(bandNum,bandNum),convXY(bandNum,bandNum);
     for (int i = 0; i < bandNum; i++){
         convXX(i,i) = 1; convYY(i,i) = 1;
@@ -848,48 +864,62 @@ void Image::calcMADDifference(const std::vector<Band>& inputBands, unsigned char
         }
     }
     solver.calcInitMAD(convXX, convXY, convYY);
+    solver.showIndex = 0;
     const int width = bands[0].value->width, height = bands[0].value->height;
-    std::vector<double> tempDiff(width * height,0);
-    int minDIff = 1e9,maxDiff = 0;
-    for (int bandIndex = 0; bandIndex < bandNum; bandIndex++){
-        double ** bandData1 = bands[bandIndex].value->normalizedData;
-        double ** bandData2 = inputBands[bandIndex].value->normalizedData;
-        for (int y = 0; y < height; y++)
-            for (int x = 0; x < width; x++){
-                int diff = NODATA, loc = y * width + x;
-                if (bandData1[y][x] != NODATA && bandData2[y][x] != NODATA && tempDiff[loc]!= NODATA && y + bias.y >= 0 && y + bias.y < height && x + bias.x >= 0 && x + bias.x < width){
-                    tempDiff[loc] += bandData1[y][x] * solver.A[0](bandIndex) - bandData2[y][x] * solver.B[0](bandIndex);
-                }else
-                    tempDiff[loc] = diff;
-            }
-    }
-    for (std::vector<double>::iterator diff = tempDiff.begin(); diff != tempDiff.end(); diff++){
-        if (*diff == NODATA)
-            continue;
-        *diff = abs(*diff);
-        if (*diff < minDIff)    minDIff = *diff;
-        if (*diff > maxDiff)    maxDiff = *diff;
-    }
-    for (int i = 0; i < width * height; i++)
-        if (tempDiff[i] == NODATA){
-            difference[i * 3 + 0] = 0;
-            difference[i * 3 + 1] = 0;
-            difference[i * 3 + 2] = 0;
+    std::vector<std::shared_ptr<Texture>> MADstack;
+    for (int MADindex = 0; MADindex < solver.rho.size(); MADindex++){
+        unsigned char* difference = new unsigned char[height * width];
+        std::vector<double> tempDiff(width * height,0);
+        int minDIff = 1e9,maxDiff = 0;
+        for (int bandIndex = 0; bandIndex < bandNum; bandIndex++){
+            double ** bandData1 = bands[bandIndex].value->normalizedData;
+            double ** bandData2 = inputBands[bandIndex].value->normalizedData;
+            for (int y = 0; y < height; y++)
+                for (int x = 0; x < width; x++){
+                    int diff = NODATA, loc = y * width + x;
+                    if (bandData1[y][x] != NODATA && bandData2[y][x] != NODATA && tempDiff[loc]!= NODATA && y + bias.y >= 0 && y + bias.y < height && x + bias.x >= 0 && x + bias.x < width){
+                        tempDiff[loc] += bandData1[y][x] * solver.A[MADindex](bandIndex) - bandData2[y][x] * solver.B[MADindex](bandIndex);
+                    }else
+                        tempDiff[loc] = diff;
+                }
         }
-        else{
-            unsigned char diff = static_cast<unsigned char>((tempDiff[i] - minDIff) / (maxDiff - minDIff) * 255);
-            difference[i * 3 + 0] = diff;
-            difference[i * 3 + 1] = diff;
-            difference[i * 3 + 2] = diff;
+        for (std::vector<double>::iterator diff = tempDiff.begin(); diff != tempDiff.end(); diff++){
+            if (*diff == NODATA)
+                continue;
+            *diff = abs(*diff);
+            if (*diff < minDIff)    minDIff = *diff;
+            if (*diff > maxDiff)    maxDiff = *diff;
         }
+        for (int i = 0; i < width * height; i++)
+            if (tempDiff[i] == NODATA)
+                difference[i ] = 0;
+            else
+                difference[i] = static_cast<unsigned char>((tempDiff[i] - minDIff) / (maxDiff - minDIff) * 255);
+        GLuint textureID;
+        glGenTextures(1, &textureID);
+        glBindTexture(GL_TEXTURE_2D, textureID);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_R8, width, height, 0, GL_RED, GL_UNSIGNED_BYTE, difference);
+        glGenerateMipmap(GL_TEXTURE_2D);
+        std::vector<glm::vec3> position = getVertices();
+        std::shared_ptr<Texture> texture = std::make_shared<Texture>(position,textureID,false);
+        glBindTexture(GL_TEXTURE_2D, 0);
+        delete [] difference;
+        MADstack.push_back(texture);
+    }
+    return MADstack;
 }
-void Image::calcDifference(const std::vector<Band>& inputBands, unsigned char* difference,int methodID,glm::vec2 bias){
+std::vector<std::shared_ptr<Texture>> Image::calcDifference(const std::vector<Band>& inputBands,int methodID,glm::vec2 bias){
     if (methodID == 0)
-        calcBasicDifference(inputBands, difference, bias);
+        return calcBasicDifference(inputBands, bias);
     else if (methodID == 1)
-        calcPCADifference(inputBands, difference, bias);
+        return calcPCADifference(inputBands, bias);
     else if (methodID == 2)
-        calcMADDifference(inputBands, difference, bias);
+        return calcMADDifference(inputBands, bias);
+    return {};
 }
 void Image::exportImage(std::string filePath){
     if (textureManager.useRGB)

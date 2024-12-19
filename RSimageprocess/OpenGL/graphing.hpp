@@ -179,9 +179,9 @@ class Image : public Primitive{
     double calcCorrelationCoefficent(std::shared_ptr<Spectum> band1,std::shared_ptr<Spectum> band2);
     void exportRGBImage(std::string filePath);
     void exportGrayImage(std::string filePath);
-    void calcBasicDifference(const std::vector<Band>& bands, unsigned char* difference,glm::vec2 bias);
-    void calcPCADifference(const std::vector<Band>& bands, unsigned char* difference,glm::vec2 bias);
-    void calcMADDifference(const std::vector<Band>& bands, unsigned char* difference,glm::vec2 bias);
+    std::vector<std::shared_ptr<Texture>> calcBasicDifference(const std::vector<Band>& bands, glm::vec2 bias);
+    std::vector<std::shared_ptr<Texture>> calcPCADifference(const std::vector<Band>& bands, glm::vec2 bias);
+    std::vector<std::shared_ptr<Texture>> calcMADDifference(const std::vector<Band>& bands, glm::vec2 bias);
 public:
     explicit Image(const std::vector<Vertex>& faceVertex):
     Primitive(faceVertex,GL_LINE_LOOP,ShaderBucket["line"].get()),textureManager(nullptr),correlation(nullptr){}
@@ -207,7 +207,7 @@ public:
     std::string getTextureStatus(){return textureManager.getStatus();}
     std::string getIndicator(int index){return textureManager.getIndicator(index);}
     bool getToAverage() const {return textureManager.getToAverage();}
-    void calcDifference(const std::vector<Band>& bands, unsigned char* difference,int methodID,glm::vec2 bias);
+    std::vector<std::shared_ptr<Texture>> calcDifference(const std::vector<Band>& bands,int methodID,glm::vec2 bias);
 };
 struct ClassType{
     std::vector<std::vector<OGRPoint>> position;

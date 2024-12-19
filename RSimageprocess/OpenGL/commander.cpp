@@ -11,6 +11,7 @@
 #include "../algorithm/classifybase.hpp"
 #include "../algorithm/unsupervise_classifier.hpp"
 #include "../algorithm/supervise_classifier.hpp"
+#include "../algorithm/mad_solver.hpp"
 
 void BufferRecorder::initIO(GLFWwindow* window){
     memset(keyRecord, GL_FALSE, sizeof(keyRecord));
@@ -55,6 +56,11 @@ void Layer::draw(){
     if (raster != nullptr)  raster->draw();
     if (vector != nullptr && roiVisible)  vector->draw();
     if (featureTexture != nullptr && featureVisible)  featureTexture->draw();
+    if (!diffTexture.empty() && diffVisible){
+        MADSolver& solver = MADSolver::getSolver();
+        diffTexture[solver.showIndex]->draw();
+        gui::drawSelectPanel();
+    }
 }
 bool Layer::BuildLayerStack(){
     const ImGuiTreeNodeFlags propertyFlag = ImGuiTreeNodeFlags_Leaf;
@@ -426,17 +432,13 @@ void Layer::calcDifference(std::shared_ptr<BundleParser> parser){
             continue;
         inputImage.LoadNewBand(imagePath,parser->getWaveLength(rasterInfo->first-1));
     }
-    const std::vector<Band>& bands = raster->getBands();
-    unsigned char* difference = new unsigned char[bands[0].value->height * bands[0].value->width * 3];
     const int pixelSize = std::stoi(parserRaster->projectionParams.at("GRID_CELL_SIZE_REFLECTIVE"));
     glm::vec2 bias = (parserRaster->projection.upleft - parser->projection.upleft);
     bias.x /= pixelSize; bias.y /= pixelSize;
-    raster->calcDifference(inputImage.getBands(),difference,2,bias);
-    if (featureTexture != nullptr)  featureTexture = nullptr;
-    generateClassifiedTexture(difference);
-    delete [] difference;
+    if (!diffTexture.empty())  diffTexture.clear();
+    diffTexture = raster->calcDifference(inputImage.getBands(),2,bias);
 }
-void Layer::generateClassifiedTexture(unsigned char *classified){
+std::shared_ptr<Texture> Layer::generateClassifiedTexture(unsigned char *classified){
     const int width = raster->getBands()[0].value->width, height = raster->getBands()[0].value->height;
     GLuint textureID;
     glGenTextures(1, &textureID);
@@ -450,8 +452,9 @@ void Layer::generateClassifiedTexture(unsigned char *classified){
     std::vector<glm::vec3> position = raster->getVertices();
     if (featureTexture != nullptr)
         featureTexture = nullptr;
-    featureTexture = std::make_shared<Texture>(position,textureID,true);
+    std::shared_ptr<Texture> texture = std::make_shared<Texture>(position,textureID,true);
     glBindTexture(GL_TEXTURE_2D, 0);
+    return texture;
 }
 void Layer::ClassifyImage(ClassifierType classifierType){
     unsigned char* classified = nullptr;
@@ -489,7 +492,7 @@ void Layer::ClassifyImage(ClassifierType classifierType){
         classifier->Classify(raster->getBands(), classified, raster->getToAverage());
         classifier->Examine(dataset);
     }
-    generateClassifiedTexture(classified);
+    featureTexture = generateClassifiedTexture(classified);
     delete[] classified;
 }
 void LayerManager::addLayer(pLayer newLayer) {

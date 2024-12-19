@@ -21,7 +21,10 @@ public:
     int bandNum;
     std::vector<double> rho;
     std::vector<VectorXd> A,B;
+    int showIndex;
     void calcInitMAD(const MatrixXd& convXX,const MatrixXd& convXY,const MatrixXd& convYY);
+    void decreaseIndex(){if (showIndex > 0)  --showIndex;}
+    void increaseIndex(){if (showIndex < bandNum - 1)    ++showIndex;}
 private:
     MatrixXd calcMatrixPowerNegHalf(const MatrixXd& conv);
     MADSolver(){}
